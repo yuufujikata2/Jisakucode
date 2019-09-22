@@ -1,0 +1,134 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define EPSVAL 1.e-20
+/* #define DELTAV 0. */
+#define DELTAV 0.147
+
+void rsq1(double a, double b, double e, double* g, int l, int nc,
+          int* nod, int nr, double* rofi, double* slonc, double* v,
+          double* valnc, int iz);
+void rseq(double a, double b, double *e, double eb1, double eb2,
+	  double *g, double *gfac, int l, int nod, int nr, int *nre,
+	  double *rofi, double *slo, double *v, double *val, int iz) ;
+int calcppofi(int nr, double a, double b, double *rofi, double *vofi, 
+	      int iz, int l, double emin, double emax, double valin, 
+	      double sloin, int *nod0, double **ep, double **val,  
+	      double **slo, double ***ppofi) { 
+/* calculates all closed channel radial WFs with logarithmic
+   derivative at r_0 : p'/p = - \infty in energy range (emin,emax).
+   Let there be nclos solutions.
+   then calculates the nclos-1 open orbtials with p'/p = sloin/valin 
+   (fixed value, valin != 0) and energy in between the closed orbtials.
+   function return = number of calculated orbitals  =: nrwf = 2 * nclos-1
+   allocates memory for arrays with dimension nrwf and returns pointers 
+   to the arrays: ep[i] = eigenvalues, val[i], slo[i] and ppofi[i]. 
+   also returns *nod0 = nodemin in argument list.
+   order : first nclos are closed with #nodes = nodemin + i, 
+   rest = closed with #nodes = nodemin + i - nclos + 1 
+*/
+    int nrwf, nhalf, nodemin, nodemax, nod, nre, i, ir ;
+    double *gfac, *gtry, epi, vali, sloi;
+
+    FILE * fp ;
+
+/* allocate termporary arrays */
+    gfac = ( double * ) calloc( nr , sizeof( double ) ) ;
+    gtry = ( double * ) calloc( 2 * nr , sizeof( double ) ) ;
+
+    printf("Requested: slo=%lf, val=%lf, slo/val=%lf\n",
+	   sloin, valin, sloin/valin);
+/* find number of nodes for emin and emax, nodemin, nodemax */
+    rsq1(a, b, emin, gtry, l,  nr-1, &nodemin, nr, rofi, &sloi, vofi,
+          &vali, iz);  
+    printf("emin=%lf, #nodes=%d, sloi=%lf, vali=%lf, sloi/vali=%lf\n", 
+            emin, nodemin, sloi, vali, sloi/vali);
+    if (sloi/vali < sloin/valin) nodemin++;
+    rsq1(a, b, emax, gtry, l,  nr-1, &nodemax, nr, rofi, &sloi, vofi,
+          &vali, iz);
+    printf("emax=%lf, #nodes=%d, sloi=%lf, vali=%lf, sloi/vali=%lf\n", 
+            emax, nodemax, sloi, vali, sloi/vali);
+/*  if (sloi/vali > sloin/valin) */
+    nodemax--;
+    printf("nodemin=%d, nodemax=%d\n", nodemin, nodemax );
+
+    *nod0 = nodemin ;
+    nhalf = nodemax - nodemin + 1 ;
+    nrwf = 2 * nhalf ;
+    
+/* allocate ep, val, slo and ppofi */
+    *ep  = ( double * ) calloc( nrwf , sizeof( double ) ) ;
+    *val = ( double * ) calloc( nrwf , sizeof( double ) ) ;
+    *slo = ( double * ) calloc( nrwf , sizeof( double ) ) ;
+    *ppofi = ( double ** ) calloc( nrwf , sizeof( double * ) ) ;
+    for ( i = 0 ; i < nrwf ; i++ )
+	(*ppofi)[i] = ( double * ) calloc( 2 * nr , sizeof( double ) ) ;
+
+/* find closed solutions for given nodenumber */
+    for ( i = 0 ; i < nhalf ; i++ ) {
+	nod = nodemin + i ;
+	vali = EPSVAL ;
+	sloi = -1. ;
+        epi = 0. ;
+	rseq(a, b, &epi, emin, emax, gtry, gfac, l, nod, nr, &nre,
+	  rofi, &sloi, vofi, &vali, iz) ;
+	(*ep)[i]  = epi + ( (l==2 && iz==24) ? DELTAV : 0.) ;
+/* original	
+	(*ep)[i]  = epi  ;
+*/
+	(*val)[i] = vali ;
+	(*slo)[i] = sloi ;
+/* rescale big component by sqrt(gfac[i]) */
+/* attention: gfac not applied to val, slo */
+	for ( ir = 0 ; ir < nr ; ir++ ) {
+	    (*ppofi)[i][ir] = gtry[ir] * sqrt(gfac[ir]);
+	    (*ppofi)[i][nr+ir] = gtry[nr+ir];
+	}
+	printf("nod=%d, ep=%11.6lf, val=%9.4lf, slo=%9.4lf, slo/val=%9.4lf\n",
+	       nod,(*ep)[i],(*val)[i],(*slo)[i],(*slo)[i]/(*val)[i]);
+    }
+
+/* find open solutions */
+    for ( i = nhalf ; i < nrwf ; i++ ) {
+	nod = nodemin + i - nhalf ;
+	vali = valin ;
+	sloi = sloin ; 
+	if ( i > nhalf ) {
+/*	    sloi = pow(-2.,i-nhalf-1); */
+	    emin = (*ep)[i-nhalf-1] ;
+	} 
+ 	emax = (*ep)[i-nhalf] ; /* overwrit. no problem since call by value */
+	rseq(a, b, &epi, emin, emax, gtry, gfac, l, nod, nr, &nre,
+	  rofi, &sloi, vofi, &vali, iz) ;
+	(*ep)[i]  = epi + ( (l==2 && iz==24) ? DELTAV : 0.) ;
+/* original
+	(*ep)[i]  = epi  ;
+*/
+	(*val)[i] = vali ;
+	(*slo)[i] = sloi ;
+/* rescale big component by sqrt(gfac[i]) */
+/* attention: gfac not applied to val, slo */
+	for ( ir = 0 ; ir < nr ; ir++ ) {
+	    (*ppofi)[i][ir] = gtry[ir] * sqrt(gfac[ir]);
+	    (*ppofi)[i][nr+ir] = gtry[nr+ir];
+	}
+	printf("nod=%d, ep=%11.6lf, val=%9.4lf, slo=%9.4lf, slo/val=%9.4lf\n",
+	       nod,(*ep)[i],(*val)[i],(*slo)[i],(*slo)[i]/(*val)[i]);
+    }
+    free(gtry) ; free(gfac) ;
+
+/* write wavefunctions into file "wavefcts" */
+    fp = fopen("wavefcts","w") ;
+    fprintf(fp,"#r|p_i(r)|e_i");
+    for ( i = 0 ; i < nrwf ; i++ )
+	fprintf(fp,"%15.8lf ", (*ep)[i]) ;
+    fprintf(fp,"\n");
+    for ( ir = 0 ; ir < nr ; ir++ ) {
+	fprintf(fp,"%15.8e", rofi[ir]) ;
+	for ( i = 0 ; i < nrwf ; i++ )
+	    fprintf(fp," %15.8e", (*ppofi)[i][ir]) ;
+	fprintf(fp,"\n");
+    }
+    fclose(fp) ;
+    return nrwf ;
+}

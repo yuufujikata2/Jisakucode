@@ -1,0 +1,121 @@
+"""
+To make super cell
+
+call fortran sub routine
+
+"""
+import sys
+import numpy as np
+import copy
+from cProfile import Profile
+import time
+
+BOHR=0.529177
+
+def main():
+    fp = open("POSCAR", mode ="r")
+    lines = fp.readlines()
+    allatom = []
+    for i in range (len(lines)):
+        worde = line.split()   
+        if i == 2:
+          Plat[0][0]=float(worde[0])
+          Plat[0][1]=float(worde[1])
+          Plat[0][2]=float(worde[2])
+        elif i==3:
+          Plat[1][0]=float(worde[0])
+          Plat[1][1]=float(worde[1])
+          Plat[1][2]=float(worde[2])
+        elif i==4:
+          Plat[2][0]=float(worde[0])
+          Plat[2][1]=float(worde[1])
+          Plat[2][2]=float(worde[2])
+        if i >= 8:
+          atom=Atom()
+          atom.pos=np.array([float(worde[0]),float(worde[1]),float(worde[2])])
+          allatom.append(atom)
+  
+  
+  
+    nbas=len(allatom)
+    
+    
+     
+    print("How is a supercell size? (plese input a b c)")
+    sucellsize=input().split()
+    if len(sucellsize)!=3:
+      print("error : plese input 3 numbers")
+      sys.exit()
+  
+    sa=int(sucellsize[0])
+    sb=int(sucellsize[1])
+    sc=int(sucellsize[2])
+  
+  
+    sinPlat=np.zeros((3,3))
+  
+    sinPlat[0]=Plat[0]*sa
+    sinPlat[1]=Plat[1]*sb
+    sinPlat[2]=Plat[2]*sc
+       
+    
+    cart=np.zeros((nbas,3))
+  
+    sinallatom_ctrl = []
+  
+   
+    for i0 in range(sa):
+      for i1 in range(sb):
+        for i2 in range(sc):
+          for k in range(nbas):
+            atom_ctrl = Atom()
+            atom_ctrl.pos = i0*Plat[0] + i1*Plat[1] + i2*Plat[2] + allatom[k].pos
+            atom_ctrl.ze = allatom[k].ze
+            atom_ctrl.rad = allatom[k].rad
+  
+  
+    for i in sinallatom_ctrl:
+        print(i.name, i.ze, i.rad, i.pos)
+  
+    with open("susel", mode = "w") as fw:
+        fw.write(str(len(sinallatom_ctrl))+" 1\n")
+        for i in sinallatom_ctrl:
+            for j in i.pos:
+                fw.write("{:>11.6f}".format(j))
+            fw.write("\n")
+            
+
+
+    fp.close()
+
+
+  
+    print("Succeeded!")
+
+
+
+class Class_ctrl():
+  def __init__(self,name,ze,rad):
+    self.name=name
+    self.ze=int(ze)
+    self.rad=float(rad)
+
+
+class Atom():
+  def __init__(self):
+    self.name=None
+    self.pos=None
+    self.ze=None
+    self.rad=None
+
+  def ctrltuika(self,allclass_ctrl):
+    for i in allclass_ctrl:
+      if i.name==self.name:
+        self.ze=i.ze
+        self.rad=i.rad
+        break
+
+
+
+if __name__=="__main__":
+  main()

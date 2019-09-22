@@ -1,0 +1,5 @@
+%% test the mcms program by running
+
+% ../Source/mcms > output
+
+%% and compare the obtained results with the files in ./OUTPUT/

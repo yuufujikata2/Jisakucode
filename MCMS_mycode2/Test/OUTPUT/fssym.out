@@ -1,0 +1,87 @@
+ # BASIS FUNCTION INCLUDING O.S. =  40   DEGENERACY=  2             
+ BASIS FUNCTION NO.  1   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  2   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  3   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  4   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  5   L=  2   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  6   L=  2   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  7   L=  2   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  8   L=  2   NO. OF TERMS=  1            0
+                              M=  2   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO.  9   L=  2   NO. OF TERMS=  1            0
+                              M=  2   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 10   L=  3   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 11   L=  3   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 12   L=  3   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 13   L=  3   NO. OF TERMS=  1            0
+                              M=  2   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 14   L=  3   NO. OF TERMS=  1            0
+                              M=  2   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 15   L=  3   NO. OF TERMS=  1            0
+                              M=  3   I=  1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 16   L=  3   NO. OF TERMS=  1            0
+                              M=  3   I= -1  ATOM NO.=  1  CN=   1.0000000000
+ BASIS FUNCTION NO. 17   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  2  CN=   1.0000000000
+ BASIS FUNCTION NO. 18   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  2  CN=   1.0000000000
+ BASIS FUNCTION NO. 19   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  2  CN=   1.0000000000
+ BASIS FUNCTION NO. 20   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  2  CN=   1.0000000000
+ BASIS FUNCTION NO. 21   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  3  CN=   1.0000000000
+ BASIS FUNCTION NO. 22   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  3  CN=   1.0000000000
+ BASIS FUNCTION NO. 23   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  3  CN=   1.0000000000
+ BASIS FUNCTION NO. 24   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  3  CN=   1.0000000000
+ BASIS FUNCTION NO. 25   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  4  CN=   1.0000000000
+ BASIS FUNCTION NO. 26   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  4  CN=   1.0000000000
+ BASIS FUNCTION NO. 27   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  4  CN=   1.0000000000
+ BASIS FUNCTION NO. 28   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  4  CN=   1.0000000000
+ BASIS FUNCTION NO. 29   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  5  CN=   1.0000000000
+ BASIS FUNCTION NO. 30   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  5  CN=   1.0000000000
+ BASIS FUNCTION NO. 31   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  5  CN=   1.0000000000
+ BASIS FUNCTION NO. 32   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  5  CN=   1.0000000000
+ BASIS FUNCTION NO. 33   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  6  CN=   1.0000000000
+ BASIS FUNCTION NO. 34   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  6  CN=   1.0000000000
+ BASIS FUNCTION NO. 35   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  6  CN=   1.0000000000
+ BASIS FUNCTION NO. 36   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  6  CN=   1.0000000000
+ BASIS FUNCTION NO. 37   L=  0   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  7  CN=   1.0000000000
+ BASIS FUNCTION NO. 38   L=  1   NO. OF TERMS=  1            0
+                              M=  0   I=  1  ATOM NO.=  7  CN=   1.0000000000
+ BASIS FUNCTION NO. 39   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I=  1  ATOM NO.=  7  CN=   1.0000000000
+ BASIS FUNCTION NO. 40   L=  1   NO. OF TERMS=  1            0
+                              M=  1   I= -1  ATOM NO.=  7  CN=   1.0000000000
+ TRUE DIMENSION OF SECULAR MATRIX TO SOLVE =  40
+ NUMBER OF INEQUIVALENT ATOMS =   7 FOR REPRESENTATION:        
+ DIMENSION JWW =   750 COULD BE   204
+ DIMENSION JXX =    65 COULD BE    65
+ DIMENSION JYL =  223650 COULD BE     360
+

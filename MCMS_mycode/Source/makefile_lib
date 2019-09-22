@@ -1,0 +1,45 @@
+OBJS = main.o readlmtopot.o makerofi.o readcofi.o \
+  calcppofi.o interpolar.o rseq.o rsq1.o rsq2.o \
+  integrate.o mkgfac.o gintsr.o norm1g.o \
+  fctp0.o fctp.o ndimarraycalloc.o \
+  potcompatible.o calcvhart.o readinput.o \
+  environment.o invtau.o inv_remat.o invdcmplxmat.o besneu.o w3j.o \
+  overlap.o gramschmidtplus.o invuppertri.o transfe0pr0dpr0.o\
+  reorderrwfs.o makeshells.o makeconfs.o combinations.o makestates.o fock.o\
+  makeham.o spama.o o1p.o o2p.o interact2list.o slaterrk.o solve_dsyev.o\
+  printstatevector.o printspec.o dipole.o solve_genev.o makeham1p.o\
+  wop2list.o derivative.o continuum.o 
+
+mcms : $(OBJS)
+	$(FC) -o $@ $(OBJS) -L/usr/local/lib -llapack -lblas
+
+# C section
+CC	= gcc
+
+CFLAGS	= 
+# CFLAGS = -Wno-implicit-function-declaration -fbounds-checking
+
+# special dependancies
+main.o : ndimarraycalloc.h w3j.h globals.h
+calcppofi.o : rseq.o rsq1.o
+rseq.o : rsq1.o rsq2.o fctp.o fctp0.o
+gramschmidtplus.o : overlap.o
+makestates.o : globals.h
+makeham.o : globals.h
+
+# Fortran 77 section
+FC 	= gfortran
+FFLAGS 	= -O
+FLIBS   = -L/usr/local/lib -llapack
+
+continuum.o : continuum.f cont.inc
+	$(FC) $(FFLAGS) -c -w $< -o $@
+
+# phony targets
+clean :
+	rm $(OBJS)
+
+extra :
+	$(FC) transformhspot.f -o transformhspot
+	$(CC) readhspot.c -lm -o readhspot
+	$(CC) instr2xyz.c -lm -o instr2xyz

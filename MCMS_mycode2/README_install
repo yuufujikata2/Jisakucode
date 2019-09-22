@@ -1,0 +1,74 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                             %
+%           The  M C M S  package             %
+%                                             %
+%   MCMS = Multichannel Multiple Scattering   %
+%                                             %
+%   Version 06/2016.  Installation guide.     %
+%                                             %
+%  (C) 2016 Peter Krüger                      %
+%                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+I) Extracting files.
+
+% tar zxvf mcms.tgz
+
+This will create a main directory 
+
+ MCMS 
+
+which includes 3 subdirectories with contents obvious from the name:
+
+ Source  Test  Tutorial
+
+II) Compilation.
+
+The Source directory contains source files and executables compiled with
+gcc, gfortran on linux ubuntu 14.04. If they don't run on your machine, 
+you need to compile the code which requires using both a 
+C compiler (default: gcc) and a Fortran compiler (default: gfortran).
+
+go into the Source directory:
+
+% cd MCMS/Source
+
+You will probabily need to edit the makefile according to the following 
+two possibilities:
+
+1) you have a Lapack/Blas library installed on your machine.
+
+% cp makefile_lib makefile
+
+edit the  makefile
+
+- set your C-compiler by replacing the word "gcc" (if needed) 
+- set your Fortran compiler by replacing "gfortran" (if needed)
+- set the library path by replacing the string "/usr/local/lib" (if needed)
+ 
+2) you don't have Lapack/Blas libraries (or you don't find them ...)
+
+% cp makefile_nolib makefile
+
+That's all in this case.
+
+% make
+
+should compile the code and produce the executable "mcms".
+In case of errors, you need to modify the makefile and/or debug the code :-(
+
+% make extra
+
+This compiles the 3 auxiliary programs transformhspot, readhspot, instr2xyz.
+If you want to "clean up" (remove object files *.o) you may run:
+
+% make clean 
+
+III. Testing the code.
+
+% cd MCMS/Test
+% ../Source/mcms > output
+
+Check the various output files against those in ./OUTPUT/
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

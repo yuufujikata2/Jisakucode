@@ -1,0 +1,97 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.interpolate import RegularGridInterpolator
+from scipy import interpolate
+import quadpy
+import time
+import rasen
+import sys
+import call_lebedev
+
+lebedev_num_list = (6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974,1202,1454,1730,2030,2354,2702,3074,3470,3890,4334,4802,5294,5810)
+
+def grid (nx,ny,nz):
+    x = np.linspace(-1,1,nx)
+    y = np.linspace(-1,1,ny)
+    z = np.linspace(-1,1,nz)
+    return x,y,z
+
+def cubic(pos):
+    xx, yy, zz = np.meshgrid(pos[0],pos[1],pos[2])
+    V = np.where( (abs(xx) <= 0.5) & (abs(yy) <= 0.5) & (abs(zz) <= 0.5), 1.,0.)
+    return V
+
+def cylinder(x,y,z):
+    xx, yy, zz = np.meshgrid(x,y,z)
+    rr = np.sqrt(xx**2 + yy**2)
+    V = np.where((rr <= 0.3) & (abs(zz) <= 0.7), 1., 0.)
+    return V
+
+def fitting(r,V,d):
+    w = np.polyfit(r,V,d)
+    print(w)
+    xs = np.linspace(r[0],r[-1],300)
+    ys = np.polyval(w,xs)
+    return xs,ys
+
+
+
+def potentialshow(x,y,z,V):
+    xx, yy, zz = np.meshgrid(x,y,z)
+    xxindex = np.where(V == 1. )
+    xx2 = xx[xxindex]
+    yyindex = np.where(V == 1. )
+    yy2 = yy[yyindex]
+    zzindex = np.where(V == 1. )
+    zz2 = zz[zzindex]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111,projection="3d")
+    ax.scatter(xx2,yy2,zz2)
+    plt.show()
+    
+
+def main():
+    fw = open("v.dat",mode="w")
+    pos = grid(300,300,300)
+    lebedev_num = lebedev_num_list[-3]
+    print("number of lebedev grid = ", lebedev_num)
+    lebedev_x=np.zeros(lebedev_num)
+    lebedev_y=np.zeros(lebedev_num)
+    lebedev_z=np.zeros(lebedev_num)
+    lebedev_w=np.zeros(lebedev_num)
+    call_lebedev.lebedev(lebedev_num,lebedev_x,lebedev_y,lebedev_z,lebedev_w)
+  
+    V = cubic(pos)
+    #V = cylinder(x,y,z)
+    #potentialshow(x,y,z,V)
+    #sys.exit()
+
+    my_inter_func = RegularGridInterpolator(pos, V)
+
+    r =np.linspace(0,1,500)
+
+    V_all = []
+
+    hyoujinumber = 0
+    for dr in r:
+        V_lebedev = sum(my_inter_func(np.array([lebedev_x,lebedev_y,lebedev_z]).T * dr) * lebedev_w)
+        #print(V_lebedev)
+        V_all.append(V_lebedev)
+        fw.write("{:>11.6f}".format(dr))
+        fw.write("{:>11.6f}".format(V_lebedev))
+        fw.write("\n")
+        
+                
+    fw.close()
+    #plt.vlines(np.sqrt(2) / 2, 0,1)
+    #plt.vlines(np.sqrt(3) / 2, 0,1)
+    plt.plot(r,V_all,marker=".")
+    #xs,ys = fitting(r,V_all,2)
+    #plt.plot(xs,ys)
+    plt.show()
+
+
+if __name__ =="__main__":
+    main()

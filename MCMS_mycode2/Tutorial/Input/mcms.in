@@ -1,0 +1,15 @@
+AbsCHPotFile	 Ca      
+CoreWFFile	 ca_2p_ch
+PhotoelEMin	-0.61    
+PhotoelEMax	 1.29
+DeltaPhotoelE	 0.005  
+KsiCor		 0.25
+ReVmtz	        -0.61604    
+OmegaMin	 26.3    
+OmegaMax	 27.7        
+DeltaOmega	 0.005 
+UnscreenedWeight 0.  
+SlaterRkScale	 0. 
+BasisEmin	-1.
+BasisEmax	 1.
+WithRefl         1

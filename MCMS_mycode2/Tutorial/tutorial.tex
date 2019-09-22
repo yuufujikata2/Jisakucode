@@ -1,0 +1,454 @@
+%\documentclass{slides}
+\documentclass[landscape]{slides}
+\usepackage{graphics}
+\usepackage{color}
+%\usepackage{psfig}
+\usepackage{epsfig}
+\newcommand{\drawline}{\vspace{-.5em}
+\begin{center}
+--------------------------------------------------------
+\end{center}
+\vspace{-.5em}
+}
+
+\pagestyle{empty}
+\addtolength{\textheight}{4cm}
+\addtolength{\topmargin}{-2.5cm}
+\addtolength{\textwidth}{1cm}
+\addtolength{\oddsidemargin}{-.5cm}
+
+\newcommand{\vs}{{\phantom{*}}}
+\newcommand{\page}{\end{slide}\begin{slide}}
+
+\begin{document}
+
+\begin{slide}
+{\bf The Multichannel Multiple Scattering (MCMS) Program} 
+
+\hfill [Peter Kr\"uger, 2016]
+
+- currently only for $L_{2,3}$-edge XAS with particle--hole wave function
+
+- magnetic systems possible but not shown here
+
+Calculated spectra [{\tt spectrum.dat}]:
+
+- isotropic spectrum  \quad $I_{\rm iso}(\omega) = \sum_q I_q(\omega)$
+
+- polarization: linear x, y, z, circular left/right (+/-) for ${\bf k}\sim z$
+
+- arbitrary polarisation can be found from 
+ $I_{qq'}(\omega)$  [{\tt specqqprime.dat}]\\
+e.g. circular dichroism for ${\bf k}\sim z$, $I_{CD} = I_{++} - I_{--}$
+
+
+- spectral decomposition in final state $d$-orbitals 
+$I_{mm'}(\omega)$ [{\tt specmmprime.dat}]
+
+
+\page
+{\bf Some features of the code}
+
+\begin{itemize}
+\item most parts written in ANSI C
+-- dynamical memory allocation.
+
+\item calls LAPACK library routines (in Fortran 77)
+
+\item calls CONTINUUM [C. R. Natoli] for $G^{ij}_{LL'}$ \\
+ -- written in Fortran 77 with static memory allocation
+\end{itemize}
+
+\newpage
+{\bf Program Flow}
+
+\begin{itemize}
+\item {\tt readinput} \quad (FILE mcms.in)
+
+\item {\tt readlmtopot} \quad (absorber potential FILEs)
+
+\item {\tt readcofi} \quad (core wave function FILE)
+
+\item construct partially screened potential
+
+\item if the FILE {\tt rhochi.dat} exists, read it
+
+({\tt rhochi.dat} contains reflectivity)
+
+\item otherwise call {\tt environment}
+which calculates reflectivity on (fine) energy mesh \{  $\epsilon_i$
+\} through standard M.S. calculation
+\begin{itemize}
+
+\item read {\tt instr.dat} = structure file 
+
+\item {\tt readlmtopot} \quad (all potential FILEs)
+
+For all photoelectron energies $\epsilon_i$:
+
+\item  calculate $t$-matrices and radial matrix elements
+of all atoms
+
+\item  call {\tt CONTINUUM} 
+which calculates $G^{ij}_{LL'}$ and sets up MS matrix.
+
+\item invert MS matrix
+
+\item return reflectivity($\epsilon_i$) to {\tt main}
+
+\end{itemize}
+
+
+\item
+calculate basis orbitals (open + closed) for R-matrix
+
+\item
+make electronic configurations and N-electron basis states =
+Slater-determinants -- no angular momentum coupling
+
+\item
+calculate matrix elements of hamiltonian between Slater determinants\\
+-- most complicated are those of Coulomb operator
+% integrals $(\nu 2p|r^k/r^{k+1}|\nu' 2p)$  and angular matrix elements 
+
+
+\item
+calculate (N-electron) matrix elements of dipole operator
+
+\item
+calculate (N-electron) matrix elements of Q and L
+
+
+{\it Begin total (or photon) energy E loop}
+
+\item
+Solve eigen-channel eqs (=generalized eigenvalue problem)
+\[
+\sum_{\nu} (E-H-L)_{\mu\nu} c_{\nu k}  = \sum_{\nu} Q_{\mu\nu} c_{\nu k} b_k 
+\]
+\item $\rightarrow$ R-matrix
+
+\item match with Bessel, Neumann-functions\\
+$\rightarrow$ 
+${\cal T}^{-1}$ = inverse of multichannel T-matrix (E)
+
+\item
+$M = {\cal T}^{-1} -\rho$\quad $\rightarrow$ pick up $\rho(\epsilon_\alpha)$ by interpolating $\rho(\epsilon)$
+
+\item invert $M$ \quad $\Rightarrow$ \quad $\tau^{00}_{\alpha\beta}$
+
+\item
+calculate dipole matrix elements $M_{\alpha L}=\langle \Psi_{\alpha L}|r_q|\Psi_g \rangle$ 
+
+\item
+calculate XAS cross section \quad 
+$I_q(E) = -\sum_{\alpha\beta} M_\alpha^*\; {\rm Im} \tau^{00}_{\alpha\beta}\; M_\beta$  
+
+{\it End total (or photon) energy E loop}
+\end{itemize}
+
+
+
+
+
+
+
+
+\page
+{\bf Input files}
+
+$\bullet$ 1 structure file: \quad {\tt instr.dat}
+
+% $\bullet$ 1 potential file for each type of atom: {\tt Ca O \dots}
+
+$\bullet$ 1 potential file for each inequivalent atom in the system:\\
+e.g. CaO: at least \ {\tt Ca, O}\\
+better 1 extra file for final-state rule potential (fully relaxed)
+{\tt Ca\_ch}
+
+$\bullet$ core-orbital file
+
+$\bullet$ main input file \quad {\tt mcms.in}\\
+contains parameters of calculation
+
+
+\page
+{\bf The structure file}  \qquad {\tt  instr.dat}
+
+\begin{small}
+\begin{verbatim}
+   27   27    2
+ Ca_01  3  20    0.000000    0.000000    0.000000
+  O_02  1   8    0.000000   -4.544792    0.000000
+ Ca_03  2  20    0.000000    4.544792    4.544792
+  O_04  1   8   -4.544792    4.544792    4.544792
+  O_02  1   8   -4.544792    0.000000    0.000000
+  O_02  1   8    0.000000    0.000000    4.544792
+  O_02  1   8    4.544792    0.000000    0.000000
+  O_02  1   8    0.000000    0.000000   -4.544792
+  O_02  1   8    0.000000    4.544792    0.000000
+ Ca_03  2  20    4.544792    0.000000   -4.544792
+  ...
+  O_04  1   8    4.544792   -4.544792   -4.544792
+  ...
+\end{verbatim}
+\end{small}
+
+1st line:
+{\tt number of atoms, number of atoms, 2}
+
+all other lines (as many as atoms):
+\begin{verbatim}
+ potfilename    lmax    Z    x    y    z
+\end{verbatim}
+
+(x,y,z in Bohr radii = 0.529177 Angs)
+
+\page
+{\bf The potential files}  \qquad {\tt  any\_name}
+
+{\bf EITHER}:\\
+use LMTO potential files
+
+\begin{small}
+\begin{verbatim}
+GENERAL: LMX=2  NSPIN=1   WSR= 2.300000  REL=F  NR=309  A=.030
+   Z=22  QC=18  QTOT=-1.657339
+...
+POT:
+  309    1     0.03000     2.30000
+ 1.446896229E+02 1.446896215E+02 1.446896172E+02 1.446896098E+02 1.446899148E+02
+ ...
+ ...
+ 1.948503960E+01 1.893767293E+01 1.839966378E+01 1.787094852E+01
+...
+\end{verbatim}
+\end{small}
+
+\end{slide}
+\begin{slide}
+
+{\bf OR}:\\ generate ``LMTO-formatted'' files from {\tt POTGEN/PHAGEN}
+potential files using utility program {\tt readhspot}.\\
+-- Take a potential file (in potgen format): e.g. xalpha.pot\\
+-- Run the programs
+
+{\tt transformhspot < xalpha.pot > C\_readable.pot}
+
+{\tt readhspot C\_readable.pot}
+
+This generates the input file {\tt instr.dat} and one potential-file for
+each inequivalent atom in LMTO format. These files are named 
+{\tt X\_01}  {\tt Y\_02} etc where X,Y are the symbols of the elements.
+
+
+
+\begin{small}
+\begin{verbatim}
+LMTO-type pot-file generated from H.S. pot-file
+Z= 20
+POT:
+  321    1     0.03000     2.99000
+ 0.000000000e+00 9.726327137e+01 9.726687378e+01 9.727058367e+01 9.727440416e+01
+ ...
+ 1.420510254e+01 1.377548513e+01 1.335201620e+01 1.293418401e+01 1.252140073e+01
+ 1.211308769e+01
+\end{verbatim}
+\end{small}
+
+\end{slide}
+\begin{slide}
+{\bf The main input file} \qquad {\tt  mcms.in}
+
+$\bullet$ format:
+
+{\tt KEYWORD VALUE}  [any comment] {\tt KEYWORD VALUE} \dots
+
+$\bullet$ order irrelevant
+
+$\bullet$ some variables have default values  (\dots danger \dots)
+
+$\bullet$ comments at any place
+{\bf except}
+ between a {\tt KEYWORD} and its {\tt VALUE}
+
+$\bullet$ energy unit: {\bf Rydberg} on input,
+{\bf eV} on output (spectra)
+
+$\bullet$ {\tt KEYWORD}'s are {\bf case sensitive} 
+
+\end{slide}
+\begin{slide}
+{\it Example of} \quad {\tt mcms.in}
+\begin{verbatim}
+AbsCHPotFile     Ca_ch     % final state potential file
+CoreWFFile       ca_2p_ch  % core wave function file    
+PhotoelEMin     -0.61      % photo electron energy range and mesh
+PhotoelEMax      1.29
+DeltaPhotoelE    0.005
+KsiCor           0.25      % spin-orbit parameter = 2 Delta / 3
+ReVmtz          -0.61604   % zero of muffin-tin potential
+OmegaMin         26.3      % photon energy range and mesh
+OmegaMax         27.5
+DeltaOmega       0.005
+UnscreenedWeight 0.        % mixing parameter for screening
+SlaterRkScale    0.        % possible scaling of Coulomb integrals
+BasisEmin       -1.        % range for searching for trial orbitals
+BasisEmax        1.
+WithRefl         1         % if = 0  atomic calculation (rho = 0)
+\end{verbatim}
+
+\end{slide}
+
+\begin{slide}
+{\bf Output files}
+
+$\bullet$ A lot of information is written on screen.\\ 
+It seems useful to redirect the screen output to some file.\\
+{\tt ./mcms > output}
+
+$\bullet$ if {\tt rhochi.dat} exists, it is taken as input.\\
+If not, it is output. Contains reflectivity data.
+
+$\bullet$ {\tt spectrum.dat} is the main spectrum output file.\\
+The meaning of the columns is given in the first line:
+\begin{verbatim}
+# omega [eV], Iiso=Ix+Iy+Iz, Ix, Iy, Iz, I-, I+, omega+ecore [eV]
+\end{verbatim}
+{\tt omega} = photon energy, {\tt omega+ecore} = photoelectron energy.
+
+\end{slide}
+\begin{slide}
+$\bullet$ {\tt specqqprime.dat} \quad contains the full tensor of
+polarisation dependent cross section, i.e. $I_{qq'}$
+with $q=0,\pm 1$.\\
+First column: photoelectron energy = omega+ecore[eV].\\
+$I_{qq'}$ is in column number $3q+q'+6$. 
+ 
+
+$\bullet$ {\tt specmmprime.dat} \quad contains $I_{mm'}$
+the cross section projected on final state d-orbitals $m$ 
+(diagonal and off-diagonal terms)
+\begin{center}
+\begin{tabular}{r|ccccc}
+m   & -2 & -1 & 0 & 1 & 2 \\
+orbital & $ixy$ & $iyz$ & $3z^2$-$r^2$ & $zx$ & $x^2$-$y^2$\\
+\end{tabular}
+\end{center}
+First column: photoelectron energy = omega+ecore[eV].\\
+$I_{mm'}$ is in column number $5m+m'+14$. 
+
+
+\end{slide}
+\begin{slide}
+
+\begin{center}
+{\large\bf Tutorial -- L23-edge spectra of CaO}
+\end{center}
+Already prepared (directory {\tt Input}) 
+
+-- potential files  (from an LMTO band structure
+calculation):\\ {\tt Ca}, {\tt O}, {\tt Ca\_ch} 
+(= fully screened core-hole potential).
+
+-- core wave function file \quad {\tt ca\_2p\_ch}
+
+-- input file \quad {\tt mcms.in}
+
+
+{\bf CaO6 octahedron}
+
+$\bullet$ write an {\tt instr.dat} file for a CaO6 octahedron
+
+Choose {\tt lmax = 3} for Ca.
+
+CaO has rocksalt structure.\quad
+(FCC with Ca at (0,0,0), O at (.5,.5,.5)).
+
+Lattice constant a = 4.81 \AA\ = 9.09 a.u.
+
+
+$\bullet$ check your cluster.
+You can run the program {\tt instr2xyz}
+which reads {\tt instr.dat} and generates {\tt str.xyz}
+(=structure file in XYZ format and \AA).
+The latter can be used 
+in most visualization software.
+
+\begin{small}
+{\em If you fail writing your own {\tt instr.dat} file, look up {\tt MoreInput}}
+\end{small}
+
+$\bullet$ run the code to calculate a spectrum in the independent
+particle aprroximation ({\tt SlaterRkScale   0.})
+
+{\tt ./mcms > output}
+
+$\bullet$ have a look at the {\tt output} file
+
+$\bullet$ plot the isotropic XAS spectrum from {\tt spectrum.dat} 
+
+$\bullet$ check for linear dichroism by comparing $Ix$, $Iy$, $Iz$\\
+e.g. $Iz-Ix$ in gnuplot: {\tt plot 'spectrum.dat' using 1:(\$5-\$3)}
+
+$\bullet$ analyze and assign the peaks in terms of d-orbital symmetries
+by plotting various columns of {\tt specmmprime.dat}.
+What do you expect from group theory?
+
+{\bf Tetragonal distortion}
+
+$\bullet$ remove or rename {\tt rhochi.dat} 
+
+$\bullet$ perform a tetragonal distortion of the structure, e.g.\ 
+by some $+4$\% in z and $-2$\% in x and y (bond lengths 4.635 and 4.365 a.u.)\\
+Repeat all the analyses and explain the observations.
+
+
+{\it Go back to the undistorted CaO6 cluster}
+
+$\bullet$ compare the isotropic spectrum with experiment
+
+
+{\bf Core-hole effect -- final state rule}
+
+$\bullet$ try to improve the spectrum by using 
+different core-hole potentials
+
+-- {\tt AbsCHPotFile  Ca} and {\tt UnscreenedWeight 0.}\\
+-- {\tt AbsCHPotFile  Ca\_ch} and {\tt UnscreenedWeight 0.}\\
+-- {\tt AbsCHPotFile  Ca\_ch} and {\tt UnscreenedWeight 0.1}
+
+
+$\bullet$ use {\tt AbsCHPotFile  Ca\_ch} and {\tt UnscreenedWeight 0.1}\\
+and switch on the multiplet coupling ({\tt SlaterRk 1.0})
+
+$\bullet$ plot the isotropic spectrum and compare with experiment
+
+$\bullet$ analyze and assign the peaks in terms of d-orbitals
+by plotting various columns of {\tt specmmprime.dat}
+
+{\bf 27-atom cluster}
+
+$\bullet$  rename {\tt instr.dat\_27} to {\tt instr.dat} 
+
+$\bullet$ visualize this cluster
+
+$\bullet$ calculate isotropic spectrum and compare with CaO6 cluster
+
+\begin{small}
+{\it Be  careful to choose sufficiently fine energy meshes (both for photon $\omega$ and photoelectron $\epsilon$) because 
+the peaks get sharper with increasing cluster size (why?)}
+\end{small}
+
+%{\bf EXTRA: TiCl4}
+ 
+%Look up the bond length of TiCl4 and generate the instr.dat file.
+%Try to generate potentials using the potgen\_scf code by C. R.Natoli, 
+%which is used in various other codes taught in this school, 
+%so you should be familiar with it. 
+%Study the influence of the electron-hole coupling.
+
+
+% {\small\it Whenever you change the structure, don't forget to rename or remove {\tt rhochi.dat}}
+\end{slide}
+\end{document}

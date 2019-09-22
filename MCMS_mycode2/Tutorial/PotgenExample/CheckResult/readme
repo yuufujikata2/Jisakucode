@@ -1,0 +1,28 @@
+In order to execute test_sym_exec you need the following files:
+a potential file (in potgen format): e.g. xalpha.pot
+
+run the helper programs transformhspot.f and readhspot.c
+
+% transformhspot < xalpha.pot > C_readable.pot
+% readhspot C_readable.pot
+
+This generates the input files "instr.dat" (*) and
+one pot-file for each inequivalent atom in LMTO format.
+These files are named X_01 Y_02 etc where X,Y are the
+symbols of the elements.
+
+For checking the structure file you may run
+% instr2xyz (without arguments)
+This reads "instr.dat" and writes "str.xyz" in XYZ format
+
+edit the main input file "mcms.in"
+
+run the MCMS program
+
+% mcms
+
+NOTES
+(*) For checking the "instr.dat" structure file you may run
+% instr2xyz (without arguments) 
+This produces "str.xyz" which has the common XYZ format 
+
