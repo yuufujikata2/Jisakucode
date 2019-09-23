@@ -40,8 +40,8 @@ def main():
 
   
     # make potential
-    V = cubic(x,y,z)
-    #V = cylinder(x,y,z)
+    #V = cubic(x,y,z)
+    V = cylinder(x,y,z)
     #V = flat(x,y,z,0)
     #potentialshow(x,y,z,V)
     #sys.exit()
