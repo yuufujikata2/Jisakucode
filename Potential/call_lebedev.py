@@ -9,7 +9,7 @@ from cProfile import Profile
 import sys
 
 def lebedev(num,x,y,z,w):
-    path = sys.path[0]+"/lebedev.so"
+    path = sys.path[0]+"/Lebedev/lebedev.so"
     f = ctypes.CDLL(path)
     num_c = ctypes.byref(ctypes.c_int32(num)) 
     f.ld_by_order_.argtypes = [     ctypes.POINTER(ctypes.c_int32),   

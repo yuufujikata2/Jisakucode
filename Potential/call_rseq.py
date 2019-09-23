@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 def rseq(a, b, e, eb1, eb2, g, gfac, l, nod, nr, nre, rofi, slo, v, val, iz):
-    path = sys.path[0]+"/rseq.so"
+    path = sys.path[0]+"/Rseq/rseq.so"
     f = ctypes.CDLL(path)
     f.rseq.argtypes = [ ctypes.c_double,
                         ctypes.c_double,
