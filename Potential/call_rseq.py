@@ -33,7 +33,7 @@ def rseq(a, b, e, eb1, eb2, g, gfac, l, nod, nr, nre, rofi, slo, v, val, iz):
     nre = nre.value
     val = val.value
     slo = slo.value
-    return a, b, e, eb1, eb2, g, gfac, l, nod, nr, nre, rofi, slo, v, val, iz
+    return  e, g, gfac, nre, slo, val
 
 def main():
     a = 0.

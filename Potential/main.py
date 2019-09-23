@@ -119,11 +119,11 @@ def main():
     vofi = np.array (V_all_r)  # select method of surface integral 
     iz = 0
 
-    a, b, energy, emin, emax, gtry, gfac, lvalsh, node, nr, nre, r, slo, vofi, val, iz = rseq(a, b, energy, emin, emax, gtry, gfac, lvalsh, node, nr, nre, r, slo, vofi, val, iz)
+    energy, gtry, gfac, nre, slo, val = rseq(a, b, energy, emin, emax, gtry, gfac, lvalsh, node, nr, nre, r, slo, vofi, val, iz)
 
     print ("E = ", energy)
-    print ("slop = ", slo)
-    print ("val = ", val)
+    print ("slope = ", slo)
+    print ("value = ", val)
     with open ("wavefunc.dat", mode = "w") as fw_w :
         fw_w.write("# rfoi, wavefunction\n")
         for i in range (nr):
