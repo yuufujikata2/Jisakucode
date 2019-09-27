@@ -1,0 +1,142 @@
+import sys
+import time
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from surfaceintegral import surfaceintegral
+from call_rseq import rseq
+
+EPSVAL = 1.e-20
+
+def main():
+
+    # make environment
+    region = 1
+    nr = 201
+    gridpx = 100
+    gridpy = 100
+    gridpz = 100
+    x,y,z = grid(gridpx,gridpy,gridpz,region)
+
+
+    #make mesh
+
+    #linear mesh
+    #r =np.linspace(0.0001,region,nr)
+
+    #log mesh
+    a = np.log(2) / (nr - 1) 
+    b = region / (np.e**(a * ( nr - 1)) - 1)
+    r = np.array([b * (np.e**(a * ( i )) - 1) for i in range(nr )])
+
+  
+    # make potential
+    #V = cubic(x,y,z)
+    V = cylinder(x,y,z)
+    #V = flat(x,y,z,0)
+    #potentialshow(x,y,z,V)
+    #sys.exit()
+
+    V_radial = surfaceintegral(x,y,z,r,V,method="rasen")
+
+    # solve radial shreduinger equation
+    energy = 0.
+    emin = -10.
+    emax = 100.
+    gtry = np.zeros((2 * nr),dtype = np.float64)
+    gfac = np.zeros((nr),dtype = np.float64)
+    lvalsh = 1 # for s orbital
+    node = 1 # for minimum energy orbital
+    nre = 0
+    slo = -1.  # for close
+    val = EPSVAL
+    vofi = np.array (V_radial)  # select method of surface integral 
+    iz = 0
+
+    energy, gtry, gfac, nre, slo, val = rseq(a, b, energy, emin, emax, gtry, gfac, lvalsh, node, nr, nre, r, slo, vofi, val, iz)
+
+    print ("E = ", energy)
+    print ("slope = ", slo)
+    print ("value = ", val)
+    with open ("wavefunc.dat", mode = "w") as fw_w :
+        fw_w.write("# rfoi, wavefunction\n")
+        for i in range (nr):
+            fw_w.write("{:>13.8f}".format(r[i]))
+            fw_w.write("{:>13.8f}".format(gtry[i]))
+            fw_w.write("\n")
+
+
+
+
+def grid (nx,ny,nz,region):
+    x = np.linspace(-region,region,nx)
+    y = np.linspace(-region,region,ny)
+    z = np.linspace(-region,region,nz)
+    return x,y,z
+
+def flat(x,y,z,a):
+    V = np.zeros((len(x),len(y),len(z)))
+    V += a
+    return V
+
+def cubic(x,y,z):
+    xx, yy, zz = np.meshgrid(x,y,z)
+    V = np.where( (abs(xx) <= 0.5) & (abs(yy) <= 0.5) & (abs(zz) <= 0.5), -1.,0.)
+    return V
+
+def cylinder(x,y,z):
+    xx, yy, zz = np.meshgrid(x,y,z)
+    rr = np.sqrt(xx**2 + yy**2)
+    V = np.where((rr <= 0.3) & (abs(zz) <= 0.7), -1., 0.)
+    return V
+
+def fitting(r,V,d):
+    w = np.polyfit(r,V,d)
+    print(w)
+    xs = np.linspace(r[0],r[-1],300)
+    ys = np.polyval(w,xs)
+    return xs,ys
+
+def potentialshow(x,y,z,V):
+    xx, yy, zz = np.meshgrid(x,y,z)
+    xxindex = np.where(V == 1. )
+    xx2 = xx[xxindex]
+    yyindex = np.where(V == 1. )
+    yy2 = yy[yyindex]
+    zzindex = np.where(V == 1. )
+    zz2 = zz[zzindex]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111,projection="3d")
+    ax.scatter(xx2,yy2,zz2)
+    plt.show()
+    
+def polargrid(dr):
+    ntheta = 100
+    nphi = 200
+    coordx = np.zeros(nphi * (ntheta + 1) - 2 * (nphi - 1) )
+    coordy = np.zeros(nphi * (ntheta + 1) - 2 * (nphi - 1) )
+    coordz = np.zeros(nphi * (ntheta + 1) - 2 * (nphi - 1) )
+    number = 0
+    for phi in range (nphi):
+        if phi == 0 :
+            for theta in range (ntheta + 1):
+                coordx[number] = dr * np.sin(np.pi / ntheta * theta) * np.cos(2 * np.pi / nphi *  phi )
+                coordy[number] = dr * np.sin(np.pi / ntheta * theta) * np.sin(2 * np.pi / nphi *  phi )
+                coordz[number] = dr * np.cos(np.pi / ntheta * theta) 
+                number += 1
+
+        else:
+            for theta in range (1,ntheta):
+                coordx[number] = dr * np.sin(np.pi / ntheta * theta) * np.cos(2 * np.pi / nphi *  phi )
+                coordy[number] = dr * np.sin(np.pi / ntheta * theta) * np.sin(2 * np.pi / nphi *  phi )
+                coordz[number] = dr * np.cos(np.pi / ntheta * theta) 
+                number += 1
+    coord = np.array([coordx,coordy,coordz])
+    coord = coord.T
+    return coord,number-1
+   
+
+
+if __name__ =="__main__":
+    main()

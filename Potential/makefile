@@ -1,9 +1,12 @@
-OBJS = rseq.o rsq1.o rsq2.o norm1g.o mkgfac.o fctp0.o fctp.o gintsr.o
-
-rseq.so : $(OBJS)
-	$(CC) -shared -o $@ $(OBJS) 
+OBJ_RSEQ = rseq.c rsq1.c rsq2.c norm1g.c mkgfac.c fctp0.c fctp.c gintsr.c
+DIR_RSEQ = ./Rseq
+OBJS = $(patsubst %.c,$(DIR_RSEQ)/%.o,$(OBJ_RSEQ) )
 
 CC = gcc
+
+rseq.so : $(OBJS)
+	$(CC) -shared -o $@ $(OBJS)
+
 
 clean :
 	rm $(OBJS)
