@@ -4,6 +4,7 @@ from scipy.interpolate import RegularGridInterpolator
 import rasen
 import call_lebedev
 import matplotlib.pyplot as plt
+import quadpy
 
 lebedev_num_list = (6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974,1202,1454,1730,2030,2354,2702,3074,3470,3890,4334,4802,5294,5810)
 
@@ -51,6 +52,11 @@ class SI_lebedev_py():
     def __init__ (self):
         #self.scheme = quadpy.sphere.lebedev_019()
         self.scheme = quadpy.sphere.lebedev_131()
+        #WARING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
+        fujikata rewrote ~/.local/lib/python3.6/site-packages/quadpy/sphere/_helpers.py line 68~72
+        """
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     def integral(self,my_inter_func,dr):
         if dr == 0. :

@@ -8,6 +8,8 @@ from call_rseq import rseq
 from makepotential import makepotential
 from basis import Basis
 from integrate import integrate
+from scipy import interpolate
+from mayavi import mlab
 
 EPSVAL = 1.e-20
 
@@ -20,7 +22,7 @@ def main():
     gridpy = 100
     gridpz = 100
     x,y,z = grid(gridpx,gridpy,gridpz,region)
-
+    xx, yy, zz = np.meshgrid(x,y,z)
 
     #make mesh
 
@@ -34,17 +36,17 @@ def main():
 
   
     # make potential
-    V = makepotential(x,y,z,pottype="cubic",potbottom=150,potshow_f=False)
+    V = makepotential(x,y,z,pottype="cubic",potbottom=-1,potshow_f=False)
 
     # surface integral
-    V_radial = surfaceintegral(x,y,z,rofi,V,method="rasen",potshow_f=False)
+    V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
     vofi = np.array (V_radial)  # select method of surface integral
 
     # make basis
     
-    node_open = 1
-    node_close = 1
-    LMAX = 1
+    node_open = 2
+    node_close = 2
+    LMAX = 3
 
     all_basis = []
 
@@ -61,7 +63,7 @@ def main():
             l_basis.append(basis)
 
         # for close channel
-        val = EPSVAL
+        val = 0.
         slo = -1.
         for node in range(node_close):
             basis = Basis(nr)
@@ -80,8 +82,9 @@ def main():
                     fw_w.write("{:>13.8f}".format(nyu_basis.g[i]))
             fw_w.write("\n")
 
-
     hsmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close),dtype = np.float64)
+    lmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
+    qmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
 
     for l1 in range (LMAX):
         for l2 in range (LMAX):
@@ -89,10 +92,39 @@ def main():
                 continue
             for n1 in range (node_open + node_close):
                 for n2 in range (node_open + node_close):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
                     hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
-
+                    lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
+                    qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
+    print ("\nhsmat")
     print (hsmat)
+    print ("\nlmat")
+    print (lmat)
+    print ("\nqmat")
+    print (qmat)
 
+
+    my_radial_interfanc = interpolate.interp1d(rofi, V_radial)
+
+    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfanc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    #WARING!!!!!!!!!!!!!!!!!!!!!!
+    """
+    Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
+    To avoid exit with error "A value in x_new is below the interpolation range."
+    """
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    print(xx)
+    with open ("V_ang.dat",mode = "w") as fw_a:
+        for i in range(len(V_ang)):
+            fw_a.write("{:>13.8f}".format(xx[50][i][50]))
+            fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
+
+    obj = mlab.volume_slice(V_ang)
+    #mayavi.mlab.plot3d(xx,yy,V_ang)
+    #mlab.contour3d(V_ang)
+    mlab.show()
 
 
 
