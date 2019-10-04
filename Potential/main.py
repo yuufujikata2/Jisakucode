@@ -105,8 +105,8 @@ def main():
     print (qmat)
 
 
+    #make not spherical potential
     my_radial_interfanc = interpolate.interp1d(rofi, V_radial)
-
     V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfanc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
     #WARING!!!!!!!!!!!!!!!!!!!!!!
     """
@@ -115,16 +115,21 @@ def main():
     """
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    print(xx)
     with open ("V_ang.dat",mode = "w") as fw_a:
-        for i in range(len(V_ang)):
-            fw_a.write("{:>13.8f}".format(xx[50][i][50]))
-            fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
+        for i in range(len(xx)):
+            for j in range(len(yy)):
+                for k in range(len(zz)):
+                    fw_a.write("{:>13.8f}".format(xx[j][i][k]))
+                    fw_a.write("{:>13.8f}".format(yy[j][i][k]))
+                    fw_a.write("{:>13.8f}".format(zz[j][i][k]))
+                    fw_a.write("{:>13.8f}\n".format(V_ang[j][i][k]))
 
+    
     obj = mlab.volume_slice(V_ang)
     #mayavi.mlab.plot3d(xx,yy,V_ang)
     #mlab.contour3d(V_ang)
     mlab.show()
+    
 
 
 
