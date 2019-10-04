@@ -9,7 +9,10 @@ from makepotential import makepotential
 from basis import Basis
 from integrate import integrate
 from scipy import interpolate
+from scipy.integrate import tplquad
 from mayavi import mlab
+from scipy.interpolate import RegularGridInterpolator
+from scipy.special import sph_harm
 
 EPSVAL = 1.e-20
 
@@ -18,9 +21,9 @@ def main():
     # make environment
     region = 2
     nr = 201
-    gridpx = 100
-    gridpy = 100
-    gridpz = 100
+    gridpx = 150
+    gridpy = 150
+    gridpz = 150
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -94,6 +97,7 @@ def main():
                 for n2 in range (node_open + node_close):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
+                        sys.exit()
                     hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
                     lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
                     qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
@@ -106,8 +110,9 @@ def main():
 
 
     #make not spherical potential
-    my_radial_interfanc = interpolate.interp1d(rofi, V_radial)
-    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfanc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
+
+    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
     #WARING!!!!!!!!!!!!!!!!!!!!!!
     """
     Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
@@ -115,23 +120,63 @@ def main():
     """
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    """
     with open ("V_ang.dat",mode = "w") as fw_a:
-        for i in range(len(xx)):
-            for j in range(len(yy)):
-                for k in range(len(zz)):
-                    fw_a.write("{:>13.8f}".format(xx[j][i][k]))
-                    fw_a.write("{:>13.8f}".format(yy[j][i][k]))
-                    fw_a.write("{:>13.8f}".format(zz[j][i][k]))
-                    fw_a.write("{:>13.8f}\n".format(V_ang[j][i][k]))
+        for i in range(len(V_ang)):
+            fw_a.write("{:>13.8f}".format(xx[50][i][50]))
+            fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
+    """
 
-    
-    obj = mlab.volume_slice(V_ang)
     #mayavi.mlab.plot3d(xx,yy,V_ang)
-    #mlab.contour3d(V_ang)
-    mlab.show()
-    
+#    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
+#    obj = mlab.volume_slice(V_ang)
+#    mlab.show()
 
+    umat = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
+#    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
+#    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+
+    theta = np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)) 
+    phi = np.arccos(xx / np.sqrt(xx **2 + yy **2))
+    dis = np.sqrt(xx * xx + yy * yy + zz * zz)
+
+    t1 = time.time()
+    for n1 in range (node_open + node_close):
+        for n2 in range (node_open + node_close):
+            for l1 in range (LMAX):
+                for l2 in range (LMAX):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
+                        sys.exit()
+                    my_radial_g1_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
+                    g1 =  my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
+                    my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
+                    g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
+                    for m1 in range (-l1,l1+1):
+                        for m2 in range (-l2,l2+1):
+                            print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
+                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
+#                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
+                            print(umat[l1][l2][m1][m2][n1][n2])
+#                            print(umat_t[l1][l2][m1][m2][n1][n2])
+                            """
+                            for xi in x:
+                                for yi in y:
+                                    for zi in z:
+                                        if np.sqrt(xi**2 + yi **2 + zi **2) < rofi[-1]:
+                                            umat_t[l1][l2][m1][m2][n1][n2] += sph_harm(m1,l1,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g1_inter_func(np.sqrt(xi**2 + yi **2 + zi **2)) * my_V_ang_inter_func((xi,yi,zi)) * sph_harm(m2,l2,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g2_inter_func(np.sqrt(xi **2 + yi **2 + zi **2))
+                            print(umat[l1][l2][m1][m2][n1][n2])
+                            print(umat_t[l1][l2][m1][m2][n1][n2])
+                            print(umat_t[l1][l2][m1][m2][n1][n2] - umat[l1][l2][m1][m2][n1][n2])
+                            """
+
+                            #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) , -0.1,0.1,-0.1,0.1,-0.1,0.1)#)-region, region , -region, region, -region, region)
+                                
+
+#def umat_calc(x,y,z,l1,l2,m1,m2):
+    t2 = time.time()
+    print("time = ",t2 - t1)
 
 
 def grid (nx,ny,nz,region):
