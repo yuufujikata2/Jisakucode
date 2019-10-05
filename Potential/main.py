@@ -21,9 +21,9 @@ def main():
     # make environment
     region = 2
     nr = 201
-    gridpx = 150
-    gridpy = 150
-    gridpz = 150
+    gridpx = 100
+    gridpy = 100
+    gridpz = 100
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -131,6 +131,7 @@ def main():
 #    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
+    t1 = time.time()
 
     umat = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
@@ -140,8 +141,12 @@ def main():
     theta = np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)) 
     phi = np.arccos(xx / np.sqrt(xx **2 + yy **2))
     dis = np.sqrt(xx * xx + yy * yy + zz * zz)
+#    region_t = np.where(dis < rofi[-1],1,0)
+    sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, gridpx,gridpy,gridpz),dtype = np.complex64)
+    for l1 in range (LMAX):
+        for m1 in range (-l1,l1 + 1):
+            sph_harm_mat[l1][m1] = sph_harm(m1,l1,theta,phi)
 
-    t1 = time.time()
     for n1 in range (node_open + node_close):
         for n2 in range (node_open + node_close):
             for l1 in range (LMAX):
@@ -154,11 +159,12 @@ def main():
                     my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
                     g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                     for m1 in range (-l1,l1+1):
+
                         for m2 in range (-l2,l2+1):
                             print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
+                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 ,0. )) / (gridpx * gridpy * gridpz)
+                            #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
 #                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
-                            print(umat[l1][l2][m1][m2][n1][n2])
 #                            print(umat_t[l1][l2][m1][m2][n1][n2])
                             """
                             for xi in x:
@@ -171,10 +177,10 @@ def main():
                             print(umat_t[l1][l2][m1][m2][n1][n2] - umat[l1][l2][m1][m2][n1][n2])
                             """
 
-                            #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) , -0.1,0.1,-0.1,0.1,-0.1,0.1)#)-region, region , -region, region, -region, region)
+                            #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) if np.sqrt(x **2 + y **2 + z **2) < rofi[-1] else 0 , -region, region , -region, region, -region, region)
+                            print(umat[l1][l2][m1][m2][n1][n2])
                                 
 
-#def umat_calc(x,y,z,l1,l2,m1,m2):
     t2 = time.time()
     print("time = ",t2 - t1)
 
