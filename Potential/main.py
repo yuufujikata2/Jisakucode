@@ -10,6 +10,7 @@ from basis import Basis
 from integrate import integrate
 from scipy import interpolate
 from scipy.integrate import tplquad
+from scipy.integrate import simps,cumtrapz
 from mayavi import mlab
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import sph_harm
@@ -21,9 +22,9 @@ def main():
     # make environment
     region = (2,2,2)
     nr = 201
-    gridpx = 50
-    gridpy = 50
-    gridpz = 50
+    gridpx = 100
+    gridpy = 100
+    gridpz = 100
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -42,14 +43,14 @@ def main():
     V = makepotential(x,y,z,pottype="cubic",potbottom=-1,potshow_f=False)
 
     # surface integral
-    V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
+    V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=True)
     vofi = np.array (V_radial)  # select method of surface integral
 
     # make basis
     
-    node_open = 2
+    node_open = 1
     node_close = 2
-    LMAX = 3
+    LMAX = 4
 
     all_basis = []
 
@@ -158,11 +159,15 @@ def main():
                         sys.exit()
                     my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
                     g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
+                    # to avoid nan in region where it can interpolate ie: dis > rofi
+                    #g_V_g = np.where(dis < rofi[-1],g1 * V_ang * g2,0.)
                     for m1 in range (-l1,l1+1):
-
                         for m2 in range (-l2,l2+1):
                             print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 ,0. )) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
+                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 / (dis ** 2),0. )) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
+                            #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z,even="first"),x = y,even="first"),x = x,even="first")
+                            #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
+                            #umat[l1][l2][m1][m2][n1][n2] = cumtrapz(cumtrapz(cumtrapz(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
                             #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
 #                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
 #                            print(umat_t[l1][l2][m1][m2][n1][n2])
