@@ -19,11 +19,11 @@ EPSVAL = 1.e-20
 def main():
 
     # make environment
-    region = 2
+    region = (2,2,2)
     nr = 201
-    gridpx = 100
-    gridpy = 100
-    gridpz = 100
+    gridpx = 50
+    gridpy = 50
+    gridpz = 50
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -34,7 +34,7 @@ def main():
 
     #log mesh
     a = np.log(2) / (nr - 1) 
-    b = region / (np.e**(a * ( nr - 1)) - 1)
+    b = min(region) / (np.e**(a * ( nr - 1)) - 1)
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
   
@@ -150,19 +150,19 @@ def main():
     for n1 in range (node_open + node_close):
         for n2 in range (node_open + node_close):
             for l1 in range (LMAX):
+                my_radial_g1_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
+                g1 =  my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                 for l2 in range (LMAX):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
                         sys.exit()
-                    my_radial_g1_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-                    g1 =  my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                     my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
                     g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                     for m1 in range (-l1,l1+1):
 
                         for m2 in range (-l2,l2+1):
                             print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 ,0. )) / (gridpx * gridpy * gridpz)
+                            umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 ,0. )) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
                             #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
 #                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
 #                            print(umat_t[l1][l2][m1][m2][n1][n2])
@@ -186,9 +186,9 @@ def main():
 
 
 def grid (nx,ny,nz,region):
-    x = np.linspace(-region,region,nx)
-    y = np.linspace(-region,region,ny)
-    z = np.linspace(-region,region,nz)
+    x = np.linspace(-region[0],region[0],nx)
+    y = np.linspace(-region[1],region[1],ny)
+    z = np.linspace(-region[2],region[2],nz)
     return x,y,z
 
 
