@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from surfaceintegral import surfaceintegral
 from call_rseq import rseq
-from makepotential import makepotential
+from makepotential20191008 import makepotential
 from basis import Basis
 from integrate import integrate
 from scipy import interpolate
@@ -20,9 +20,7 @@ EPSVAL = 1.e-20
 def main():
 
     # make environment
-    pot_region = (1,1,1)
-    radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
-    region = (radius,radius,radius)
+    region = (2,2,2)
     nr = 201
     gridpx = 150 
     gridpy = 150  
@@ -37,12 +35,12 @@ def main():
 
     #log mesh
     a = np.log(2) / (nr - 1) 
-    b = radius / (np.e**(a * ( nr - 1)) - 1)
+    b = min(region) / (np.e**(a * ( nr - 1)) - 1)
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
   
     # make potential
-    V = makepotential(x,y,z,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
+    V = makepotential(x,y,z,pottype="cubic",potbottom=-1,potshow_f=False)
 
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
