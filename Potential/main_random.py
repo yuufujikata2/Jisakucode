@@ -24,9 +24,9 @@ def main():
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
-    gridpx = 130 
-    gridpy = 130  
-    gridpz = 130  
+    gridpx = 100 
+    gridpy = 100  
+    gridpz = 100  
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -127,7 +127,7 @@ def main():
     #make not spherical potential
     my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
 
-    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    V_ang = np.where(np.sqrt(xx **2 + yy **2 + zz **2) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx **2 + yy **2 + zz **2)),0. )
     #WARING!!!!!!!!!!!!!!!!!!!!!!
     """
     Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
@@ -151,36 +151,53 @@ def main():
     umat = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
-#    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
 
-    theta = np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)) 
-    phi = np.arccos(xx / np.sqrt(xx **2 + yy **2))
-    dis = np.sqrt(xx **2 + yy **2 + zz **2)
-    dis2 = xx **2 + yy **2 + zz **2
+    gridrx = 50
+    gridry = 50
+    gridrz = 50
+
+    randxx = np.random.rand(gridrx,gridry,gridrz) * region[0] * 2 - region[0]
+    randyy = np.random.rand(gridrx,gridry,gridrz) * region[1] * 2 - region[1]
+    randzz = np.random.rand(gridrx,gridry,gridrz) * region[2] * 2 - region[2]
+
+    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+    V_rand_ang = my_V_ang_inter_func((randxx,randyy,randzz))
+
+    #randxx,randyy,randzz = np.meshgrid(randx,randy,randz)
+
+    #V_rand = makepotential(randxx,randyy,randzz,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
+    #V_ang = np.where(np.sqrt(randxx **2 + randyy **2 + randzz **2) < rofi[-1] , V_rand - my_radial_interfunc(np.sqrt(randxx **2 + randyy **2 + randzz **2)),0. )
+#    obj = mlab.volume_slice(randxx,randyy,randzz,V_ang)
+#    mlab.show()
+#    sys.exit()
+    theta = np.arccos(randzz / np.sqrt(randxx **2 + randyy **2 + randzz **2)) 
+    phi = np.arccos(randxx / np.sqrt(randxx **2 + randyy **2))
+    dis = np.sqrt(randxx **2 + randyy **2 + randzz **2)
+    dis2 = randxx **2 + randyy **2 + randzz **2
 #    region_t = np.where(dis < rofi[-1],1,0)
-    sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, gridpx,gridpy,gridpz),dtype = np.complex64)
+    sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, gridrx,gridry,gridrz),dtype = np.complex64)
     for l1 in range (LMAX):
         for m1 in range (-l1,l1 + 1):
-            sph_harm_mat[l1][m1] = sph_harm(m1,l1,theta,phi)
+            sph_harm_mat[l1][m1] = np.where(randxx **2 + randyy **2 != 0,sph_harm(m1,l1,theta,phi),0.)
 
     for n1 in range (node_open + node_close):
         for n2 in range (node_open + node_close):
             for l1 in range (LMAX):
                 my_radial_g1_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-                g1 =  my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
+                g1 =  my_radial_g1_inter_func(np.sqrt(randxx**2 + randyy **2 + randzz **2))
                 for l2 in range (LMAX):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
                         sys.exit()
                     my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
-                    g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
+                    g2 =  my_radial_g2_inter_func(np.sqrt(randxx**2 + randyy **2 + randzz **2))
                     # to avoid nan in region where it can not interpolate ie: dis > rofi
-                    g_V_g = np.where(dis < rofi[-1],g1 * V_ang * g2,0.)
+                    g_V_g = np.where(dis < rofi[-1],g1 * V_rand_ang * g2,0.)
                     for m1 in range (-l1,l1+1):
                         for m2 in range (-l2,l2+1):
                             print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            #umat[l1][l2][m1][m2][n1][n2] = np.sum(sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2] / dis2) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
-                            umat[l1][l2][m1][m2][n1][n2] = np.sum(sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
+                            umat[l1][l2][m1][m2][n1][n2] = np.sum(sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridrx * gridry * gridrz)
+                            #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 / (dis ** 2),0. )) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
                             #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z,even="first"),x = y,even="first"),x = x,even="first")
                             #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
                             #umat[l1][l2][m1][m2][n1][n2] = cumtrapz(cumtrapz(cumtrapz(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)

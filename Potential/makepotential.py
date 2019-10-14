@@ -24,8 +24,8 @@ def flat(x,y,z,a):
     V += a
     return V
 
-def cubic(x,y,z,pot_region,a):
-    xx, yy, zz = np.meshgrid(x,y,z)
+def cubic(xx,yy,zz,pot_region,a):
+    #xx, yy, zz = np.meshgrid(x,y,z)
     V = np.where( (abs(xx) <= pot_region[0]) & (abs(yy) <= pot_region[1]) & (abs(zz) <= pot_region[2]), a,0.)
     return V
 
