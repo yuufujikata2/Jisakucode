@@ -18,15 +18,15 @@ from scipy.special import sph_harm
 EPSVAL = 1.e-20
 
 def main():
-
     # make environment
-    pot_region = (1,1,1)
+    t1 = time.time()
+    pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
-    gridpx = 150 
-    gridpy = 150  
-    gridpz = 150  
+    gridpx = 51
+    gridpy = 51 
+    gridpz = 51
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -40,7 +40,6 @@ def main():
     b = radius / (np.e**(a * ( nr - 1)) - 1)
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
-  
     # make potential
     V = makepotential(x,y,z,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
 
@@ -128,6 +127,16 @@ def main():
     my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
 
     V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    """
+    for i in range(gridpx):
+        for j in range(gridpy):
+            for k in range(gridpz):
+                print(V_ang[i][j][k],end="  ")
+            print("")
+        print("\n")
+    sys.exit()
+    """
+
     #WARING!!!!!!!!!!!!!!!!!!!!!!
     """
     Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
@@ -146,40 +155,40 @@ def main():
 #    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
-    t1 = time.time()
 
-    umat = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
+    umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
 #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
 #    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
 
-    theta = np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)) 
-    phi = np.arccos(xx / np.sqrt(xx **2 + yy **2))
     dis = np.sqrt(xx **2 + yy **2 + zz **2)
     dis2 = xx **2 + yy **2 + zz **2
+    theta = np.where( dis != 0., np.arccos(zz / dis), 0.)
+    phi = np.where( xx**2 + yy **2 != 0. , np.arccos(xx / np.sqrt(xx **2 + yy **2)), 0.)
 #    region_t = np.where(dis < rofi[-1],1,0)
     sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, gridpx,gridpy,gridpz),dtype = np.complex64)
     for l1 in range (LMAX):
         for m1 in range (-l1,l1 + 1):
-            sph_harm_mat[l1][m1] = sph_harm(m1,l1,theta,phi)
+            sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,theta,phi),0.)
+    g_ln_mat = np.zeros((node_open + node_close,LMAX,gridpx,gridpy,gridpz),dtype = np.float64)
+    for n1 in range (node_open + node_close):
+        for l1 in range (LMAX):
+            my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
+            g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
 
     for n1 in range (node_open + node_close):
         for n2 in range (node_open + node_close):
             for l1 in range (LMAX):
-                my_radial_g1_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-                g1 =  my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                 for l2 in range (LMAX):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
                         sys.exit()
-                    my_radial_g2_inter_func = interpolate.interp1d(rofi,all_basis[l2][n2].g[:nr])
-                    g2 =  my_radial_g2_inter_func(np.sqrt(xx**2 + yy **2 + zz **2))
                     # to avoid nan in region where it can not interpolate ie: dis > rofi
-                    g_V_g = np.where(dis < rofi[-1],g1 * V_ang * g2,0.)
+                    g_V_g = np.where(dis < rofi[-1],g_ln_mat[n1][l1] * V_ang * g_ln_mat[n2][l2],0.)
                     for m1 in range (-l1,l1+1):
                         for m2 in range (-l2,l2+1):
                             print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][l2][m1][m2][n1][n2] = np.sum(sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2] / dis2) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
+                            umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where(dis2 != 0. ,sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
                             #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm_mat[l1][m1] * g1 * V_ang * sph_harm_mat[l2][m2] * g2 / (dis ** 2),0. )) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (gridpx * gridpy * gridpz)
                             #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z,even="first"),x = y,even="first"),x = x,even="first")
                             #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
@@ -199,7 +208,7 @@ def main():
                             """
 
                             #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) if np.sqrt(x **2 + y **2 + z **2) < rofi[-1] else 0 , -region, region , -region, region, -region, region)
-                            print(umat[l1][l2][m1][m2][n1][n2])
+                            print(umat[n1][n2][l1][l2][m1][m2])
                                 
 
     t2 = time.time()
