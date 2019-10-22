@@ -2,41 +2,54 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from mayavi import mlab
 
-def makepotential(x,y,z,pot_region,pottype="cubic",potbottom=-1.,potshow_f=False):
+def makepotential(xx,yy,zz,pot_region,pottype="cubic",potbottom=-1.,potshow_f=False):
     if pottype =="cubic" :
-        V = cubic(x,y,z,pot_region,potbottom)
+        V = cubic(xx,yy,zz,pot_region,potbottom)
     elif pottype == "cylinder" :
-        V = cylinder(x,y,z,potbottom)
+        V = cylinder(xx,yy,zz,pot_region,potbottom)
     elif pottype == "flat" :
-        V = flat(x,y,z,potbottom)
+        V = flat(xx,yy,zz,potbottom)
+    elif pottype == "sinproduct" :
+        V = sinproduct(xx,yy,zz,potbottom)
+    elif pottype == "cosproduct" :
+        V = cosproduct(xx,yy,zz,potbottom)
     else :
         print("error: There is no pottype entered")
         sys.exit()
 
     if potshow_f :
-        potentialshow(x,y,z,V,potbottom)
+        if len(xx) * len(yy) * len(zz) > 500000 :
+            print("error: memory over")
+            sys.exit()
+        potentialshow(xx,yy,zz,V,potbottom)
 
     return V
 
-def flat(x,y,z,a):
-    V = np.zeros((len(x),len(y),len(z)))
+def flat(xx,yy,zz,a):
+    V = np.zeros((len(xx),len(yy),len(zz)))
     V += a
     return V
 
-def cubic(x,y,z,pot_region,a):
-    xx, yy, zz = np.meshgrid(x,y,z)
+def cubic(xx,yy,zz,pot_region,a):
     V = np.where( (abs(xx) <= pot_region[0]) & (abs(yy) <= pot_region[1]) & (abs(zz) <= pot_region[2]), a,0.)
     return V
 
-def cylinder(x,y,z,a):
-    xx, yy, zz = np.meshgrid(x,y,z)
+def cylinder(xx,yy,zz,pot_region,a):
     rr = np.sqrt(xx**2 + yy**2)
-    V = np.where((rr <= 0.3 * x[-1]) & (abs(zz) <= 0.7 * z[-1]), a, 0.)
+    V = np.where((rr <= 0.3 * pot_region[0]) & (abs(zz) <= 0.7 * pot_region[2]), a, 0.)
     return V
 
-def potentialshow(x,y,z,V,a):
-    xx, yy, zz = np.meshgrid(x,y,z)
+def sinproduct(xx,yy,zz,a):
+    V = np.sin(xx) * np.sin(yy) * np.sin(zz) * a
+    return V
+
+def cosproduct(xx,yy,zz,a):
+    V = np.cos(xx) * np.cos(yy) * np.cos(zz) * a
+    return V
+
+def potentialshow(xx,yy,zz,V,a):
     xxindex = np.where(V == a )
     xx2 = xx[xxindex]
     yyindex = np.where(V == a )
@@ -50,11 +63,17 @@ def potentialshow(x,y,z,V,a):
     zzindex0 = np.where(V == 0. )
     zz0 = zz[zzindex0]
 
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111,projection="3d")
     ax.plot(xx2,yy2,zz2,"o",color = "blue")
     ax.plot(xx0[::2][::2][::2],yy0[::2][::2][::2],zz0[::2][::2][::2],"o",color = "green",ms = 2, mew = 0.1)
     plt.show()
+    """
+
+    mlab.points3d(V,scale_factor= 0.4)
+    mlab.show()
+
 
 
 
