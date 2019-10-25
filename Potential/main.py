@@ -170,9 +170,9 @@ def main():
 
     V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
 
-#    mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
-#    obj = mlab.volume_slice(V_ang_i)
-#    mlab.show()
+    #mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
+    #obj = mlab.volume_slice(V_ang_i)
+    #mlab.show()
 
     dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
     dis2 = ixx **2 + iyy **2 + izz **2
