@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from surfaceintegral import surfaceintegral
 from call_rseq import rseq
+from call_lebedev import lebedev
 from makepotential import makepotential
 from basis import Basis
 from integrate import integrate
@@ -14,19 +15,20 @@ from scipy.integrate import simps,cumtrapz
 from mayavi import mlab
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import sph_harm
+from sympy.physics.quantum.cg import Wigner3j
 
 EPSVAL = 1.e-20
+lebedev_num_list = (6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974,1202,1454,1730,2030,2354,2702,3074,3470,3890,4334,4802,5294,5810)
 
 def main():
     # make environment
-    t1 = time.time()
     pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
-    gridpx = 50
-    gridpy = 50 
-    gridpz = 50 
+    gridpx = 200
+    gridpy = 200 
+    gridpz = 200 
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -41,7 +43,7 @@ def main():
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
     # make potential
-    V = makepotential(xx,yy,zz,pot_region,pottype="cosproduct",potbottom=-1,potshow_f=True)
+    V = makepotential(xx,yy,zz,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
 
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
@@ -126,16 +128,9 @@ def main():
     #make not spherical potential
     my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
 
-    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
-    """
-    for i in range(gridpx):
-        for j in range(gridpy):
-            for k in range(gridpz):
-                print(V_ang[i][j][k],end="  ")
-            print("")
-        print("\n")
-    sys.exit()
-    """
+    #V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+    my_V_inter_func = RegularGridInterpolator((x, y, z), V)
 
     #WARING!!!!!!!!!!!!!!!!!!!!!!
     """
@@ -144,50 +139,72 @@ def main():
     """
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    """
-    with open ("V_ang.dat",mode = "w") as fw_a:
-        for i in range(len(V_ang)):
-            fw_a.write("{:>13.8f}".format(xx[50][i][50]))
-            fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
-    """
 
     #mayavi.mlab.plot3d(xx,yy,V_ang)
 #    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
 
-    umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-#    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
-    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
-
-    igridpx = 101
-    igridpy = 101
-    igridpz = 101
-
-    ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
-    ixx,iyy,izz = np.meshgrid(ix,iy,iz)
-
-    V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
-
-    #mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
-    #obj = mlab.volume_slice(V_ang_i)
-    #mlab.show()
-
-    dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
-    dis2 = ixx **2 + iyy **2 + izz **2
-    theta = np.where( dis != 0., np.arccos(izz / dis), 0.)
-    phi = np.where( ixx**2 + iyy **2 != 0. , np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), 0.)
-#    region_t = np.where(dis < rofi[-1],1,0)
-    sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
-    for l1 in range (LMAX):
-        for m1 in range (-l1,l1 + 1):
-            sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,theta,phi),0.)
-    g_ln_mat = np.zeros((node_open + node_close,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
-    for n1 in range (node_open + node_close):
+    #for V_L
+    fw_umat_vl = open("umat_vl.dat",mode="w")
+    for LMAX_k in range(3,15):
+        t1 = time.time()
+        umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
+        #LMAX_k = 3
+        fw_umat_vl.write(str(LMAX_k))
+        igridnr = 200
+        leb_r = np.linspace(0,radius,igridnr)
+        lebedev_num = lebedev_num_list[-1]
+    
+        V_L = np.zeros((LMAX_k, 2 * LMAX_k + 1, igridnr), dtype = np.complex64)
+        leb_x =np.zeros(lebedev_num)
+        leb_y =np.zeros(lebedev_num)
+        leb_z =np.zeros(lebedev_num)
+        leb_w =np.zeros(lebedev_num)
+    
+        lebedev(lebedev_num,leb_x,leb_y,leb_z,leb_w)
+    
+        theta = np.arccos(leb_z)
+        phi = np.where( leb_x **2 + leb_y **2 != 0. , np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2)), 0.)
+    
+        for i in range(igridnr):
+            V_leb_r = my_V_inter_func((leb_r[i] * leb_x, leb_r[i] * leb_y, leb_r[i] * leb_z)) * leb_w
+            for l1 in range(LMAX_k):
+                for m1 in range(-l1,l1+1):
+                    V_L[l1][m1][i] = np.sum(V_leb_r * sph_harm(m1,l1,theta,phi).conjugate())
+                #print("l = ",l1,"m = ", m1)
+                #plt.plot(leb_r,V_L[l1][m1].real,marker=".")
+                #plt.show()
+    
+        g_ln = np.zeros((node_open + node_close,LMAX,igridnr),dtype = np.float64)
+        for n1 in range (node_open + node_close):
+            for l1 in range (LMAX):
+                my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
+                g_ln[n1][l1] = my_radial_g_inter_func(leb_r)
         for l1 in range (LMAX):
-            my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-            g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
+            for l2 in range (LMAX):
+                for m1 in range(-l1,l1+1):
+                    for m2 in range(-l2,l2+1):
+                        for k in range(1,LMAX_k):
+                            for q in range(-k,k+1):
+                                C_kq = Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() 
+                                for n1 in range (node_open + node_close):
+                                    for n2 in range (node_open + node_close):
+                                        umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2],leb_r) * (-1) **(-m1) * (2 * l1 + 1) * (2 * l2 +1) * np.sqrt((2 * k + 1) / (4 * np.pi))
+                                #print(umat[n1][n2][l1][l2][m1][m2])
+                                fw_umat_vl.write("{:>15.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
+    
+        t2 = time.time()
+        print("LMAX = ",LMAX_k," time = ",t2 - t1)
+    
+        fw_umat_vl.write("\n")
+
+
+    sys.exit()
+  
+
+
 
     fw_u = open("umat_nlm.dat",mode="w")
     count = 0
@@ -209,25 +226,6 @@ def main():
                             fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
                             count += 1
 
-
-                            #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z,even="first"),x = y,even="first"),x = x,even="first")
-                            #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
-                            #umat[l1][l2][m1][m2][n1][n2] = cumtrapz(cumtrapz(cumtrapz(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
-                            #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
-#                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
-#                            print(umat_t[l1][l2][m1][m2][n1][n2])
-                            """
-                            for xi in x:
-                                for yi in y:
-                                    for zi in z:
-                                        if np.sqrt(xi**2 + yi **2 + zi **2) < rofi[-1]:
-                                            umat_t[l1][l2][m1][m2][n1][n2] += sph_harm(m1,l1,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g1_inter_func(np.sqrt(xi**2 + yi **2 + zi **2)) * my_V_ang_inter_func((xi,yi,zi)) * sph_harm(m2,l2,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g2_inter_func(np.sqrt(xi **2 + yi **2 + zi **2))
-                            print(umat[l1][l2][m1][m2][n1][n2])
-                            print(umat_t[l1][l2][m1][m2][n1][n2])
-                            print(umat_t[l1][l2][m1][m2][n1][n2] - umat[l1][l2][m1][m2][n1][n2])
-                            """
-
-                            #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) if np.sqrt(x **2 + y **2 + z **2) < rofi[-1] else 0 , -region, region , -region, region, -region, region)
                             print(umat[n1][n2][l1][l2][m1][m2])
                                 
 

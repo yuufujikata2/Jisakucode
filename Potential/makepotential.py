@@ -46,7 +46,7 @@ def sinproduct(xx,yy,zz,a):
     return V
 
 def cosproduct(xx,yy,zz,a):
-    V = np.cos(xx) * np.cos(yy) * np.cos(zz) * a
+    V = np.cos(xx-0.5) * np.cos(yy) * np.cos(zz) * a
     return V
 
 def potentialshow(xx,yy,zz,V,a):

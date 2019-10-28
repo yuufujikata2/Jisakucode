@@ -18,146 +18,147 @@ from scipy.special import sph_harm
 EPSVAL = 1.e-20
 
 def main():
+    # make environment
+    pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
+    radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
+    region = (radius,radius,radius)
+    nr = 201
+    gridpx = 200 
+    gridpy = 200  
+    gridpz = 200  
+    x,y,z = grid(gridpx,gridpy,gridpz,region)
+    xx, yy, zz = np.meshgrid(x,y,z)
+
+    #make mesh
+
+    #linear mesh
+    #r =np.linspace(0.0001,region,nr)
+
+    #log mesh
+    a = np.log(2) / (nr - 1) 
+    b = radius / (np.e**(a * ( nr - 1)) - 1)
+    rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
+
+    # make potential
+    V = makepotential(xx,yy,zz,pot_region,pottype="cosproduct",potbottom=-1,potshow_f=False)
+
+    # surface integral
+    V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
+    vofi = np.array (V_radial)  # select method of surface integral
+
+    # make basis
+    
+    node_open = 1
+    node_close = 2
+    LMAX = 4
+
+    all_basis = []
+
+    for lvalsh in range (LMAX):
+        l_basis = []
+        # for open channel
+        val = 1.
+        slo = 0.
+        for node in range(node_open):
+            basis = Basis(nr)
+            emin = -10.
+            emax = 100.
+            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
+            l_basis.append(basis)
+
+        # for close channel
+        val = 0.
+        slo = -1.
+        for node in range(node_close):
+            basis = Basis(nr)
+            emin = -10.
+            emax = 100.
+            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
+            l_basis.append(basis)
+
+        all_basis.append(l_basis)
+
+    with open ("wavefunc.dat", mode = "w") as fw_w :
+        fw_w.write("#r,   l, node, open or close = ") 
+        for l_basis in all_basis:
+            for nyu_basis in l_basis:
+                fw_w.write(str(nyu_basis.l))
+                fw_w.write(str(nyu_basis.node))
+                if nyu_basis.open:
+                    fw_w.write("open")
+                else:
+                    fw_w.write("close")
+                fw_w.write("    ")
+        fw_w.write("\n")
+
+        for i in range(nr):
+            fw_w.write("{:>13.8f}".format(rofi[i]))
+            for l_basis in all_basis:
+                for nyu_basis in l_basis:
+                    fw_w.write("{:>13.8f}".format(nyu_basis.g[i]))
+            fw_w.write("\n")
+
+    hsmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close),dtype = np.float64)
+    lmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
+    qmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
+
+    for l1 in range (LMAX):
+        for l2 in range (LMAX):
+            if l1 != l2 :
+                continue
+            for n1 in range (node_open + node_close):
+                for n2 in range (node_open + node_close):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
+                        sys.exit()
+                    hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
+                    lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
+                    qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
+    print ("\nhsmat")
+    print (hsmat)
+    print ("\nlmat")
+    print (lmat)
+    print ("\nqmat")
+    print (qmat)
+
+
+    #make not spherical potential
+    my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
+
+    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    """
+    for i in range(gridpx):
+        for j in range(gridpy):
+            for k in range(gridpz):
+                print(V_ang[i][j][k],end="  ")
+            print("")
+        print("\n")
+    sys.exit()
+    """
+
+    #WARING!!!!!!!!!!!!!!!!!!!!!!
+    """
+    Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
+    To avoid exit with error "A value in x_new is below the interpolation range."
+    """
+    #!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    """
+    with open ("V_ang.dat",mode = "w") as fw_a:
+        for i in range(len(V_ang)):
+            fw_a.write("{:>13.8f}".format(xx[50][i][50]))
+            fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
+    """
+
+    #mayavi.mlab.plot3d(xx,yy,V_ang)
+#    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
+#    obj = mlab.volume_slice(V_ang)
+#    mlab.show()
+
     fw_grid = open("umat_2.dat",mode = "w")
     for ngrid in range(20,121):
         fw_grid.write(str(ngrid)+" ") 
-        # make environment
         t1 = time.time()
-        pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
-        radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
-        region = (radius,radius,radius)
-        nr = 201
-        gridpx = 200 
-        gridpy = 200  
-        gridpz = 200  
-        x,y,z = grid(gridpx,gridpy,gridpz,region)
-        xx, yy, zz = np.meshgrid(x,y,z)
-    
-        #make mesh
-    
-        #linear mesh
-        #r =np.linspace(0.0001,region,nr)
-    
-        #log mesh
-        a = np.log(2) / (nr - 1) 
-        b = radius / (np.e**(a * ( nr - 1)) - 1)
-        rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
-    
-        # make potential
-        V = makepotential(xx,yy,zz,pot_region,pottype="cosproduct",potbottom=-1,potshow_f=False)
-    
-        # surface integral
-        V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
-        vofi = np.array (V_radial)  # select method of surface integral
-    
-        # make basis
-        
-        node_open = 1
-        node_close = 2
-        LMAX = 4
-    
-        all_basis = []
-    
-        for lvalsh in range (LMAX):
-            l_basis = []
-            # for open channel
-            val = 1.
-            slo = 0.
-            for node in range(node_open):
-                basis = Basis(nr)
-                emin = -10.
-                emax = 100.
-                basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
-                l_basis.append(basis)
-    
-            # for close channel
-            val = 0.
-            slo = -1.
-            for node in range(node_close):
-                basis = Basis(nr)
-                emin = -10.
-                emax = 100.
-                basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
-                l_basis.append(basis)
-    
-            all_basis.append(l_basis)
-    
-        with open ("wavefunc.dat", mode = "w") as fw_w :
-            fw_w.write("#r,   l, node, open or close = ") 
-            for l_basis in all_basis:
-                for nyu_basis in l_basis:
-                    fw_w.write(str(nyu_basis.l))
-                    fw_w.write(str(nyu_basis.node))
-                    if nyu_basis.open:
-                        fw_w.write("open")
-                    else:
-                        fw_w.write("close")
-                    fw_w.write("    ")
-            fw_w.write("\n")
-    
-            for i in range(nr):
-                fw_w.write("{:>13.8f}".format(rofi[i]))
-                for l_basis in all_basis:
-                    for nyu_basis in l_basis:
-                        fw_w.write("{:>13.8f}".format(nyu_basis.g[i]))
-                fw_w.write("\n")
-    
-        hsmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close),dtype = np.float64)
-        lmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
-        qmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
-    
-        for l1 in range (LMAX):
-            for l2 in range (LMAX):
-                if l1 != l2 :
-                    continue
-                for n1 in range (node_open + node_close):
-                    for n2 in range (node_open + node_close):
-                        if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
-                            print("error: L is differnt")
-                            sys.exit()
-                        hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
-                        lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
-                        qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
-        print ("\nhsmat")
-        print (hsmat)
-        print ("\nlmat")
-        print (lmat)
-        print ("\nqmat")
-        print (qmat)
-    
-    
-        #make not spherical potential
-        my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
-    
-        V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
-        """
-        for i in range(gridpx):
-            for j in range(gridpy):
-                for k in range(gridpz):
-                    print(V_ang[i][j][k],end="  ")
-                print("")
-            print("\n")
-        sys.exit()
-        """
-    
-        #WARING!!!!!!!!!!!!!!!!!!!!!!
-        """
-        Fujikata rewrote ~/.local/lib/python3.6/site-packages/scipy/interpolate/interpolate.py line 690~702
-        To avoid exit with error "A value in x_new is below the interpolation range."
-        """
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-        """
-        with open ("V_ang.dat",mode = "w") as fw_a:
-            for i in range(len(V_ang)):
-                fw_a.write("{:>13.8f}".format(xx[50][i][50]))
-                fw_a.write("{:>13.8f}\n".format(V_ang[i][50][50]))
-        """
-    
-        #mayavi.mlab.plot3d(xx,yy,V_ang)
-    #    mlab.contour3d(V_ang,color = (1,1,1),opacity = 0.1)
-    #    obj = mlab.volume_slice(V_ang)
-    #    mlab.show()
     
         umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
     #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
@@ -204,7 +205,7 @@ def main():
                         g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
                         for m1 in range (-l1,l1+1):
                             for m2 in range (-l2,l2+1):
-                                print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
+                                #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
                                 umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
                                 fw_grid.write("{:>13.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
 
@@ -226,12 +227,12 @@ def main():
                                 """
     
                                 #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) if np.sqrt(x **2 + y **2 + z **2) < rofi[-1] else 0 , -region, region , -region, region, -region, region)
-                                print(umat[n1][n2][l1][l2][m1][m2])
+                                #print(umat[n1][n2][l1][l2][m1][m2])
                                     
     
         t2 = time.time()
         fw_grid.write("\n")
-        print("time = ",t2 - t1)
+        print("grid = ", ngrid, "time = ",t2 - t1)
     fw_grid.close()
 
 
