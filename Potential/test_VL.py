@@ -148,15 +148,14 @@ def main():
 
     #for V_L
     fw_umat_vl = open("umat_vl.dat",mode="w")
-    for LMAX_k in range(3,10):
+    for LMAX_k in range(3,15):
         t1 = time.time()
         umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-        #LMAX_k = 7
-        #fw_umat_vl.write(str(lebnum))
+        #LMAX_k = 3
         fw_umat_vl.write(str(LMAX_k))
         igridnr = 200
         leb_r = np.linspace(0,radius,igridnr)
-        lebedev_num = lebedev_num_list[-8]
+        lebedev_num = lebedev_num_list[-1]
     
         V_L = np.zeros((LMAX_k, 2 * LMAX_k + 1, igridnr), dtype = np.complex64)
         leb_x =np.zeros(lebedev_num)
@@ -183,24 +182,56 @@ def main():
             for l1 in range (LMAX):
                 my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
                 g_ln[n1][l1] = my_radial_g_inter_func(leb_r)
-        for n1 in range (node_open + node_close):
-            for n2 in range (node_open + node_close):
-                for l1 in range (LMAX):
-                    for l2 in range (LMAX):
-                        for m1 in range(-l1,l1+1):
-                            for m2 in range(-l2,l2+1):
-                                for k in range(1,LMAX_k):
-                                    for q in range(-k,k+1):
-                                        umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2], leb_r) * (-1) **(-m1) * np.sqrt((2 * l1 + 1) * (2 * l2 +1)) *Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() * np.sqrt((2 * k + 1) / (4 * np.pi))
+        for l1 in range (LMAX):
+            for l2 in range (LMAX):
+                for m1 in range(-l1,l1+1):
+                    for m2 in range(-l2,l2+1):
+                        for k in range(1,LMAX_k):
+                            for q in range(-k,k+1):
+                                C_kq = Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() 
+                                for n1 in range (node_open + node_close):
+                                    for n2 in range (node_open + node_close):
+                                        umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2],leb_r) * (-1) **(-m1) * (2 * l1 + 1) * (2 * l2 +1) * np.sqrt((2 * k + 1) / (4 * np.pi))
                                 #print(umat[n1][n2][l1][l2][m1][m2])
                                 fw_umat_vl.write("{:>15.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
     
         t2 = time.time()
-        #print("number of lebedev grid = ",lebedev_num_list[lebnum]," time = ",t2 - t1)
         print("LMAX = ",LMAX_k," time = ",t2 - t1)
     
         fw_umat_vl.write("\n")
 
+
+    sys.exit()
+  
+
+
+
+    fw_u = open("umat_nlm.dat",mode="w")
+    count = 0
+
+    for n1 in range (node_open + node_close):
+        for n2 in range (node_open + node_close):
+            for l1 in range (LMAX):
+                for l2 in range (LMAX):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
+                        sys.exit()
+                    # to avoid nan in region where it can not interpolate ie: dis > rofi
+                    g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
+                    for m1 in range (-l1,l1+1):
+                        for m2 in range (-l2,l2+1):
+                            print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
+                            umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where(dis2 != 0., sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
+                            fw_u.write(str(count))
+                            fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
+                            count += 1
+
+                            print(umat[n1][n2][l1][l2][m1][m2])
+                                
+
+    fw_u.close()
+    t2 = time.time()
+    print("time = ",t2 - t1)
 
 
 def grid (nx,ny,nz,region):
