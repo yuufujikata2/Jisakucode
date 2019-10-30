@@ -38,7 +38,8 @@ def main():
     #r =np.linspace(0.0001,region,nr)
 
     #log mesh
-    a = np.log(2) / (nr - 1) 
+    #a = np.log(2) / (nr - 1) 
+    a = 0.03
     b = radius / (np.e**(a * ( nr - 1)) - 1)
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
@@ -150,9 +151,9 @@ def main():
     fw_umat_vl = open("umat_vl.dat",mode="w")
     umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
     LMAX_k = 9
-    igridnr = 200
+    igridnr = 201
     leb_r = np.linspace(0,radius,igridnr)
-    lebedev_num = lebedev_num_list[10]
+    lebedev_num = lebedev_num_list[-1]
  
     V_L = np.zeros((LMAX_k, 2 * LMAX_k + 1, igridnr), dtype = np.complex64)
     leb_x =np.zeros(lebedev_num)
@@ -167,11 +168,9 @@ def main():
  
     for i in range(igridnr):
         V_leb_r = my_V_inter_func(np.array([leb_x,leb_y,leb_z]).T * leb_r[i]) * leb_w
-        mlab.points3d(V_leb_r)#,scale_factor= 0.4)
-        mlab.show()
         for k in range(LMAX_k):
             for q in range(-k,k+1):
-                V_L[k][q][i] = np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
+                V_L[k][q][i] = 4 * np.pi * np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
     """
     for k in range(LMAX_k):
         for q in range(-k,k+1):
