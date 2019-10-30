@@ -148,7 +148,7 @@ def main():
 
     #for V_L
     fw_umat_vl = open("umat_vl.dat",mode="w")
-    for LMAX_k in range(3,9):
+    for LMAX_k in range(10):
         t1 = time.time()
         umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
         #LMAX_k = 3
@@ -170,26 +170,32 @@ def main():
     
         for i in range(igridnr):
             V_leb_r = my_V_inter_func((leb_r[i] * leb_x, leb_r[i] * leb_y, leb_r[i] * leb_z)) * leb_w
-            for l1 in range(LMAX_k):
-                for m1 in range(-l1,l1+1):
-                    V_L[l1][m1][i] = np.sum(V_leb_r * sph_harm(m1,l1,theta,phi).conjugate())
-                #print("l = ",l1,"m = ", m1)
-                #plt.plot(leb_r,V_L[l1][m1].real,marker=".")
-                #plt.show()
+            for k in range(LMAX_k):
+                for q in range(-k,k+1):
+                    V_L[k][q][i] = np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
+        """
+        for k in range(LMAX_k):
+            for q in range(-k,k+1):
+                print("k = ",k,"q = ", q)
+                plt.plot(leb_r,V_L[k][q].real,marker=".")
+                plt.show()
+        sys.exit()
+        """
     
         g_ln = np.zeros((node_open + node_close,LMAX,igridnr),dtype = np.float64)
         for n1 in range (node_open + node_close):
             for l1 in range (LMAX):
                 my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
                 g_ln[n1][l1] = my_radial_g_inter_func(leb_r)
-        C_kq = np.zeros((LMAX,LMAX,2*LMAX+1,2*LMAX+1,LMAX_k,2*LMAX_k),dtype=np.complex64)
+        C_kq = np.zeros((LMAX,LMAX,2*LMAX+1,2*LMAX+1,LMAX_k,2*LMAX_k+1),dtype=np.float64)
         for l1 in range (LMAX):
             for l2 in range (LMAX):
                 for m1 in range(-l1,l1+1):
                     for m2 in range(-l2,l2+1):
                         for k in range(1,LMAX_k):
                             for q in range(-k,k+1):
-                                C_kq[l1][l2][m1][m2][k][q] = (-1) **(-m1) * (2 * l1 + 1) * (2 * l2 +1) * Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() 
+                                C_kq[l1][l2][m1][m2][k][q] = (-1) **(-m1) * np.sqrt((2 * l1 + 1) * (2 * l2 +1)) * Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() 
+                                #print(l1,l2,m1,m2,k,q,C_kq[l1][l2][m1][m2][k][q])
         for l1 in range (LMAX):
             for l2 in range (LMAX):
                 for m1 in range(-l1,l1+1):

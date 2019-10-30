@@ -46,7 +46,7 @@ class SI_lebedev_f():
         call_lebedev.lebedev(self.lebedev_num,self.lebedev_x,self.lebedev_y,self.lebedev_z,self.lebedev_w)
 
     def integral(self,my_inter_func,dr):
-        return  sum(my_inter_func(np.array([self.lebedev_x,self.lebedev_y,self.lebedev_z]).T * dr) * self.lebedev_w)
+        return  np.sum(my_inter_func(np.array([self.lebedev_x,self.lebedev_y,self.lebedev_z]).T * dr) * self.lebedev_w)
 
 class SI_lebedev_py():
     def __init__ (self):
