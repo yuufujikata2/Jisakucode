@@ -53,7 +53,7 @@ def main():
     
     node_open = 1
     node_close = 2
-    LMAX = 4
+    LMAX = 10
 
     all_basis = []
 
@@ -147,13 +147,14 @@ def main():
 
 
     #for V_L
-    fw_umat_vl = open("umat_vl.dat",mode="w")
-    for LMAX_k in range(10):
+    fw_umat_vl = open("umat_vl_all.dat",mode="w")
+    for LMAX_k in range(10,13):
+        fw_umat_vl_2 = open("umat_vl_L"+str(LMAX_k)+".dat",mode="w")
         t1 = time.time()
         umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
         #LMAX_k = 3
         fw_umat_vl.write(str(LMAX_k))
-        igridnr = 200
+        igridnr = 201
         leb_r = np.linspace(0,radius,igridnr)
         lebedev_num = lebedev_num_list[-8]
     
@@ -166,13 +167,12 @@ def main():
         lebedev(lebedev_num,leb_x,leb_y,leb_z,leb_w)
     
         theta = np.arccos(leb_z)
-        phi = np.where( leb_x **2 + leb_y **2 != 0. , np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2)), 0.)
-    
+        phi = np.where( leb_x **2 + leb_y **2 != 0. , np.where(leb_y >= 0,np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2)), np.pi + np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2))), 0.)    
         for i in range(igridnr):
-            V_leb_r = my_V_inter_func((leb_r[i] * leb_x, leb_r[i] * leb_y, leb_r[i] * leb_z)) * leb_w
+            V_leb_r = my_V_inter_func(np.array([leb_x,leb_y,leb_z]).T * leb_r[i]) * leb_w
             for k in range(LMAX_k):
                 for q in range(-k,k+1):
-                    V_L[k][q][i] = np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
+                    V_L[k][q][i] = 4 * np.pi * np.sum(V_leb_r * sph_harm(q,k,phi,theta).conjugate())
         """
         for k in range(LMAX_k):
             for q in range(-k,k+1):
@@ -196,6 +196,7 @@ def main():
                             for q in range(-k,k+1):
                                 C_kq[l1][l2][m1][m2][k][q] = (-1) **(-m1) * np.sqrt((2 * l1 + 1) * (2 * l2 +1)) * Wigner3j(l1,0,k,0,l2,0).doit() * Wigner3j(l1,-m1,k,q,l2,m2).doit() 
                                 #print(l1,l2,m1,m2,k,q,C_kq[l1][l2][m1][m2][k][q])
+        count = 0
         for l1 in range (LMAX):
             for l2 in range (LMAX):
                 for m1 in range(-l1,l1+1):
@@ -206,10 +207,14 @@ def main():
                                     for q in range(-k,k+1):
                                         umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2],leb_r)  * C_kq[l1][l2][m1][m2][k][q] * np.sqrt((2 * k + 1) / (4 * np.pi))
                                 fw_umat_vl.write("{:>15.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
+                                fw_umat_vl_2.write("{:>15.8f}".format(count))
+                                fw_umat_vl_2.write("{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real))
+                                count += 1
 
     
         t2 = time.time()
         print("LMAX = ",LMAX_k," time = ",t2 - t1)
+        fw_umat_vl_2.close()
     
         fw_umat_vl.write("\n")
     fw_umat_vl.close()

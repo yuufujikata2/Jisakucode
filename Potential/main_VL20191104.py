@@ -26,9 +26,9 @@ def main():
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
-    gridpx = 200
-    gridpy = 200 
-    gridpz = 200 
+    gridpx = 100
+    gridpy = 100 
+    gridpz = 100 
     x,y,z = grid(gridpx,gridpy,gridpz,region)
     xx, yy, zz = np.meshgrid(x,y,z)
 
@@ -150,7 +150,7 @@ def main():
     #for V_L
     fw_umat_vl = open("umat_vl.dat",mode="w")
     umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-    LMAX_k = 9
+    LMAX_k = 10
     igridnr = 201
     leb_r = np.linspace(0,radius,igridnr)
     lebedev_num = lebedev_num_list[-1]
@@ -164,13 +164,34 @@ def main():
     lebedev(lebedev_num,leb_x,leb_y,leb_z,leb_w)
  
     theta = np.arccos(leb_z)
-    phi = np.where( leb_x **2 + leb_y **2 != 0. , np.where(leb_y >= 0,np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2)), np.pi + np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2))), 0.)
+    phi = np.where( leb_x **2 + leb_y **2 != 0. , np.where(leb_y >= 0 ,np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2)),np.pi + np.arccos(leb_x / np.sqrt(leb_x **2 + leb_y **2))), 0.)
  
     for i in range(igridnr):
         V_leb_r = my_V_inter_func(np.array([leb_x,leb_y,leb_z]).T * leb_r[i]) * leb_w
         for k in range(LMAX_k):
             for q in range(-k,k+1):
-                V_L[k][q][i] = 4 * np.pi * np.sum(V_leb_r * sph_harm(q,k,phi,theta).conjugate())
+                V_L[k][q][i] =  4 * np.pi * np.sum(V_leb_r * sph_harm(q,k,phi,theta).conjugate())
+    ndis = np.sqrt(xx **2 +yy **2 + zz **2)
+    ndis2 = xx **2 + yy **2 + zz **2
+    ntheta = np.where( ndis != 0., np.arccos(zz / ndis), 0.)
+    nphi = np.where( yy **2 + xx **2 != 0. , np.where(yy >= 0 ,np.arccos(xx / np.sqrt(xx **2 + yy **2)), np.pi + np.arccos(xx / np.sqrt(xx **2 + yy **2))), 0.)
+    V_new = np.zeros((gridpx,gridpy,gridpz),dtype=np.complex64)
+    V_new_kari = np.zeros((gridpx,gridpy,gridpz),dtype=np.complex64)
+    for l in range(LMAX_k):
+        for m in range(-l,l+1):
+            my_newV_real_inter_func = interpolate.interp1d(leb_r,V_L[l][m].real)
+            my_newV_imag_inter_func = interpolate.interp1d(leb_r,V_L[l][m].imag)
+            V_new_kari.real = my_newV_real_inter_func(np.sqrt(xx**2+yy**2+zz**2))
+            V_new_kari.imag = my_newV_imag_inter_func(np.sqrt(xx**2+yy**2+zz**2))
+            V_new += np.where(ndis< radius, V_new_kari * np.where(ndis!=0.,sph_harm(m,l,nphi,ntheta),0.),0)
+    for i in range(gridpx):
+        for j in range(gridpx):
+            for k in range(gridpx):
+                if V[i][j][k] == -1.:
+                    print(V[i][j][k],V_new[i][j][k].real)
+    sys.exit()
+
+
     """
     for k in range(LMAX_k):
         for q in range(-k,k+1):

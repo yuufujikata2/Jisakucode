@@ -200,14 +200,14 @@ def main():
     dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
     dis2 = ixx **2 + iyy **2 + izz **2
     theta = np.where( dis != 0., np.arccos(izz / dis), 0.)
-    phi = np.where( iyy**2 + ixx **2 != 0 , np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), 0.)
+    phi = np.where( iyy**2 + ixx **2 != 0 , np.where(iyy >= 0, np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), np.pi + np.arccos(ixx / np.sqrt(ixx **2 + iyy **2))), 0.)
     #phi = np.where( iyy != 0. , phi, 0.)
     #phi = np.where(iyy > 0, phi,-phi)
 #    region_t = np.where(dis < rofi[-1],1,0)
     sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
     for l1 in range (LMAX):
         for m1 in range (-l1,l1 + 1):
-            sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,theta,phi),0.)
+            sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
     g_ln_mat = np.zeros((node_open + node_close,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
     for n1 in range (node_open + node_close):
         for l1 in range (LMAX):

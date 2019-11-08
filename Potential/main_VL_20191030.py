@@ -71,7 +71,7 @@ def main():
         V_leb_r = my_V_inter_func(np.array([leb_x,leb_y,leb_z]).T * leb_r[i]) * leb_w
         for k in range(LMAX_k):
             for q in range(-k,k+1):
-                V_L[k][q][i] = 4 * np.pi * np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
+                V_L[k][q][i] = 4 * np.pi *  np.sum(V_leb_r * sph_harm(q,k,theta,phi).conjugate())
  
     vofi =np.array([ V_L[0][0].real / np.sqrt(4 * np.pi)],dtype=np.float64)  # select method of surface integral
 
@@ -200,7 +200,7 @@ def main():
                         for n2 in range (node_open + node_close):
                             for k in range(1,LMAX_k):
                                 for q in range(-k,k+1):
-                                    umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2],leb_r)  * C_kq[l1][l2][m1][m2][k][q] * np.sqrt((2 * k + 1) / (4 * np.pi))
+                                    umat[n1][n2][l1][l2][m1][m2] += simps(g_ln[n1][l1] * V_L[k][q] * g_ln[n2][l2],leb_r)  * C_kq[l1][l2][m1][m2][k][q] #* np.sqrt((2 * k + 1) / (4 * np.pi))
                             
                             fw_umat_vl.write("{:>15.8f}".format(count))
                             fw_umat_vl.write("{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real))
