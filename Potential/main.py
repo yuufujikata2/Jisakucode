@@ -71,7 +71,7 @@ def main():
     
     node_open = 1
     node_close = 2
-    LMAX = 4
+    LMAX = 10
 
     all_basis = []
 
@@ -83,7 +83,7 @@ def main():
         for node in range(node_open):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
@@ -93,7 +93,7 @@ def main():
         for node in range(node_close):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
@@ -183,9 +183,9 @@ def main():
 
     my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
 
-    igridpx = 101
-    igridpy = 101
-    igridpz = 101
+    igridpx = 50
+    igridpy = 50
+    igridpz = 50
 
     ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
     ixx,iyy,izz = np.meshgrid(ix,iy,iz)

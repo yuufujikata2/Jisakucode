@@ -50,7 +50,7 @@ def main():
     
     node_open = 1
     node_close = 2
-    LMAX = 4
+    LMAX = 7
 
     all_basis = []
 
@@ -155,8 +155,9 @@ def main():
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
 
-    fw_grid = open("umat_2.dat",mode = "w")
-    for ngrid in range(20,121):
+    fw_grid = open("umat_grid_all.dat",mode = "w")
+    for ngrid in range(50,80):
+        fw_grid_2 = open("umat_grid"+str(ngrid)+".dat",mode="w")
         fw_grid.write(str(ngrid)+" ") 
         t1 = time.time()
     
@@ -182,12 +183,12 @@ def main():
         dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
         dis2 = ixx **2 + iyy **2 + izz **2
         theta = np.where( dis != 0., np.arccos(izz / dis), 0.)
-        phi = np.where( ixx**2 + iyy **2 != 0. , np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), 0.)
+        phi = np.where( iyy**2 + ixx **2 != 0 , np.where(iyy >= 0, np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), np.pi + np.arccos(ixx / np.sqrt(ixx **2 + iyy **2))), 0.)
     #    region_t = np.where(dis < rofi[-1],1,0)
         sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
         for l1 in range (LMAX):
             for m1 in range (-l1,l1 + 1):
-                sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,theta,phi),0.)
+                sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
         g_ln_mat = np.zeros((node_open + node_close,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
         for n1 in range (node_open + node_close):
             for l1 in range (LMAX):
@@ -206,28 +207,18 @@ def main():
                         for m1 in range (-l1,l1+1):
                             for m2 in range (-l2,l2+1):
                                 #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                                umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1] * g_V_g * sph_harm_mat[l2][m2].conjugate() / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
+                                umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
                                 fw_grid.write("{:>13.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
-
-                                #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z,even="first"),x = y,even="first"),x = x,even="first")
-                                #umat[l1][l2][m1][m2][n1][n2] = simps(simps(simps(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
-                                #umat[l1][l2][m1][m2][n1][n2] = cumtrapz(cumtrapz(cumtrapz(g_V_g * sph_harm_mat[l1][m1] * sph_harm_mat[l2][m2],x = z),x = y),x = x)
-                                #umat[l1][l2][m1][m2][n1][n2] = np.sum( np.where( dis < rofi[-1] ,sph_harm(m1,l1,theta,phi) * g1 * V_ang * sph_harm(m2,l2,theta,phi) * g2 ,0. )) / (gridpx * gridpy * gridpz)
-    #                            umat_t[l1][l2][m1][m2][n1][n2] = np.sum( np.where( np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] ,sph_harm(m1,l1,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g1_inter_func(np.sqrt(xx**2 + yy **2 + zz **2)) * my_V_ang_inter_func((xx,yy,zz)) * sph_harm(m2,l2,np.arccos(zz / np.sqrt(xx **2 + yy **2 + zz **2)),np.arccos(xx / np.sqrt(xx **2 + yy **2))) * my_radial_g2_inter_func(np.sqrt(xx **2 + yy **2 + zz **2)),0. ))
-    #                            print(umat_t[l1][l2][m1][m2][n1][n2])
-                                """
-                                for xi in x:
-                                    for yi in y:
-                                        for zi in z:
-                                            if np.sqrt(xi**2 + yi **2 + zi **2) < rofi[-1]:
-                                                umat_t[l1][l2][m1][m2][n1][n2] += sph_harm(m1,l1,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g1_inter_func(np.sqrt(xi**2 + yi **2 + zi **2)) * my_V_ang_inter_func((xi,yi,zi)) * sph_harm(m2,l2,np.arccos(zi / np.sqrt(xi **2 + yi **2 + zi **2)),np.arccos(xi / np.sqrt(xi **2 + yi **2))) * my_radial_g2_inter_func(np.sqrt(xi **2 + yi **2 + zi **2))
-                                print(umat[l1][l2][m1][m2][n1][n2])
-                                print(umat_t[l1][l2][m1][m2][n1][n2])
-                                print(umat_t[l1][l2][m1][m2][n1][n2] - umat[l1][l2][m1][m2][n1][n2])
-                                """
-    
-                                #umat[l1][l2][m1][m2][n1][n2] = tplquad( lambda x, y, z : sph_harm(m1,l1,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g1_inter_func(np.sqrt(x**2 + y **2 + z **2)) * my_V_ang_inter_func((x,y,z)) * sph_harm(m2,l2,np.arccos(z / np.sqrt(x **2 + y **2 + z **2)),np.arccos(x / np.sqrt(x **2 + y **2))).real * my_radial_g2_inter_func(np.sqrt(x **2 + y **2 + z **2)) if np.sqrt(x **2 + y **2 + z **2) < rofi[-1] else 0 , -region, region , -region, region, -region, region)
-                                #print(umat[n1][n2][l1][l2][m1][m2])
+        count = 0
+        for l1 in range (LMAX):
+            for l2 in range (LMAX):
+                for m1 in range (-l1,l1+1):
+                    for m2 in range (-l2,l2+1):
+                        for n1 in range (node_open + node_close):
+                            for n2 in range (node_open + node_close):
+                                fw_grid_2.write(str(count))
+                                fw_grid_2.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
+                                count += 1
                                     
     
         t2 = time.time()
