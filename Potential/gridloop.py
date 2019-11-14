@@ -40,7 +40,7 @@ def main():
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
     # make potential
-    V = makepotential(xx,yy,zz,pot_region,pottype="cosproduct",potbottom=-1,potshow_f=False)
+    V = makepotential(xx,yy,zz,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
 
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
@@ -50,7 +50,7 @@ def main():
     
     node_open = 1
     node_close = 2
-    LMAX = 7
+    LMAX = 4
 
     all_basis = []
 
@@ -156,7 +156,7 @@ def main():
 #    mlab.show()
 
     fw_grid = open("umat_grid_all.dat",mode = "w")
-    for ngrid in range(50,80):
+    for ngrid in range(20,100):
         fw_grid_2 = open("umat_grid"+str(ngrid)+".dat",mode="w")
         fw_grid.write(str(ngrid)+" ") 
         t1 = time.time()
