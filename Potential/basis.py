@@ -25,7 +25,7 @@ class Basis():
             self.open = True
 
         self.e, self.g, self.gfac, self.nre, self.slo, self.val = rseq(a, b, self.e, emin, emax, self.g, self.gfac, self.l, self.node, nr, self.nre, rofi, self.slo, vofi, self.val, iz)
-        self.g[:nr] *= np.sqrt(self.gfac)
+        self.g[:nr] = self.g[:nr] * np.sqrt(self.gfac)
         if self.open:
             print ("l = {:>2}  \"open\" slo = {:>9.6f} val = {:>9.6f} energy = {:>9.6f}".format(self.l,self.slo,self.val,self.e))
         else:

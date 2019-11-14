@@ -71,8 +71,7 @@ def main():
     
     node_open = 1
     node_close = 2
-    node = node_open + node_close
-    LMAX = 3
+    LMAX = 10
 
     all_basis = []
 
@@ -81,21 +80,21 @@ def main():
         # for open channel
         val = 1.
         slo = 0.
-        for no in range(node_open):
+        for node in range(node_open):
             basis = Basis(nr)
             emin = -10.
             emax = 100.
-            basis.make_basis(a,b,emin,emax,lvalsh,no,nr,rofi,slo,vofi,val)
+            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
         # for close channel
         val = 0.
         slo = -1.
-        for nc   in range(node_close):
+        for node in range(node_close):
             basis = Basis(nr)
             emin = -10.
             emax = 100.
-            basis.make_basis(a,b,emin,emax,lvalsh,nc,nr,rofi,slo,vofi,val)
+            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
         all_basis.append(l_basis)
@@ -120,9 +119,9 @@ def main():
                     fw_w.write("{:>13.8f}".format(nyu_basis.g[i]))
             fw_w.write("\n")
 
-    hsmat = np.zeros((LMAX,LMAX,node,node),dtype = np.float64)
-    lmat = np.zeros((LMAX,LMAX,node,node), dtype = np.float64)
-    qmat = np.zeros((LMAX,LMAX,node,node), dtype = np.float64)
+    hsmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close),dtype = np.float64)
+    lmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
+    qmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
     """
     for l1 in range (LMAX):
         for n1 in range (node_open + node_close):
@@ -134,12 +133,12 @@ def main():
         for l2 in range (LMAX):
             if l1 != l2 :
                 continue
-            for n1 in range (node):
-                for n2 in range (node):
+            for n1 in range (node_open + node_close):
+                for n2 in range (node_open + node_close):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
                         sys.exit()
-                    hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l2][n2].e
+                    hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
                     lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
                     qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
     print ("\nhsmat")
@@ -149,37 +148,7 @@ def main():
     print ("\nqmat")
     print (qmat)
 
-    hs_L = np.zeros((LMAX,LMAX,node,node))
-    count = 0
-    for l1 in range(LMAX):
-        for m1 in range(-l1,l1+1):
-            for n1 in range(node):
-                for l2 in range(LMAX):
-                    for m2 in range(-l2,l2+1):
-                        for n2 in range(node):
-                            if m1 == m2 :
-                                print(count,"  ","{:>8.4f}".format(qmat[l1][l2][n1][n2]))
-                            else:
-                                print(count,"  ","{:>8.4f}".format(0))
-                            count += 1
-    print("")
-    """
-    for l1 in range(LMAX):
-        for n1 in range(node):
-            for l2 in range(LMAX):
-                for n2 in range(node):
-                    print("{:>8.4f}".format(lmat[l1][l2][n1][n2]),end="")
-            print("")
-    print("")
 
-    for l1 in range(LMAX):
-        for n1 in range(node):
-            for l2 in range(LMAX):
-                for n2 in range(node):
-                    hs_L[l1][l2][n1][n2] = hsmat[l1][l2][n1][n2] + lmat[l1][l2][n1][n2]
-                    print("{:>8.4f}".format(hs_L[l1][l2][n1][n2]),end="")
-            print("")
-    """
 
 
     #make not spherical potential
@@ -215,7 +184,7 @@ def main():
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
 
-    umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
+    umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
 #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
     my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
@@ -245,16 +214,16 @@ def main():
     for l1 in range (LMAX):
         for m1 in range (-l1,l1 + 1):
             sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
-    g_ln_mat = np.zeros((node,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
-    for n1 in range (node):
+    g_ln_mat = np.zeros((node_open + node_close,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
+    for n1 in range (node_open + node_close):
         for l1 in range (LMAX):
             my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
             g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
 
     fw_u = open("umat_nlm.dat",mode="w")
 
-    for n1 in range (node):
-        for n2 in range (node):
+    for n1 in range (node_open + node_close):
+        for n2 in range (node_open + node_close):
             for l1 in range (LMAX):
                 for l2 in range (LMAX):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
@@ -264,42 +233,22 @@ def main():
                     g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
                     for m1 in range (-l1,l1+1):
                         for m2 in range (-l2,l2+1):
-                            #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
+                            print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
                             umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where(dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
-                            #print(umat[n1][n2][l1][l2][m1][m2])
+                            print(umat[n1][n2][l1][l2][m1][m2])
     count = 0
     for l1 in range (LMAX):
         for l2 in range (LMAX):
             for m1 in range (-l1,l1+1):
                 for m2 in range (-l2,l2+1):
-                    for n1 in range (node):
-                        for n2 in range (node):
+                    for n1 in range (node_open + node_close):
+                        for n2 in range (node_open + node_close):
                             fw_u.write(str(count))
                             fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
                             count += 1
 
 
     fw_u.close()
-
-    ham_mat = np.zeros((LMAX,2*LMAX+1,node,LMAX,2*LMAX+1,node))
-    qmetric_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
-    for l1 in range(LMAX):
-        for m1 in range (-l1,l1+1):
-            for n1 in range(node):
-                for l2 in range(LMAX):
-                    for m2 in range(-l2,l2+1):
-                        for n2 in range(node):
-                            if m1 == m2 :
-                                ham_mat[l1][m1][n1][l2][m2][n2] += hs_L[l1][l2][n1][n2]
-                                qmetric_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] = qmat[l1][l2][n1][n2]
-                            ham_mat[l1][m1][n1][l2][m2][n2] += umat[n1][n2][l1][l2][m1][m2].real
-
-    for i in range(node**2 * LMAX**4):
-        print(i,"  ","{:>8.4f}".format(qmetric_mat[i]))
-    lambda_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
-
-
-
     t2 = time.time()
     print("time = ",t2 - t1)
 
