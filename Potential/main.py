@@ -73,7 +73,7 @@ def main():
     node_open = 1
     node_close = 2
     node = node_open + node_close
-    LMAX = 3
+    LMAX = 5
 
     all_basis = []
 
@@ -300,8 +300,21 @@ def main():
         print(alphalong)
         print(betalong)
         #print(revec)
+        
+        k = 0
+        jk = np.zeros(node*LMAX**2,dtype=np.int32) 
         for i in range(node*LMAX**2):
-            print(revec[i*node*LMAX**2:(i+1) * node*LMAX**2])
+            if betalong[i] != 0. :
+                jk[k] = i
+                k += 1
+
+
+        fw_revec = open("revec_2.dat",mode="w")
+        for i in range(LMAX**2):
+            fw_revec.write("{:>4}".format(i))
+            for j in range(node*LMAX**2):
+                fw_revec.write("{:>13.8f}".format(revec[j+jk[i]*node*LMAX**2]))
+            fw_revec.write("\n")
 
 
     t2 = time.time()
