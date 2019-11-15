@@ -270,7 +270,7 @@ def main():
 
     fw_u.close()
 
-    ham_mat = np.zeros((LMAX,2*LMAX+1,node,LMAX,2*LMAX+1,node))
+    ham_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
     qmetric_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
     for l1 in range(LMAX):
         for m1 in range (-l1,l1+1):
@@ -279,30 +279,29 @@ def main():
                     for m2 in range(-l2,l2+1):
                         for n2 in range(node):
                             if m1 == m2 :
-                                ham_mat[l1][m1][n1][l2][m2][n2] += hs_L[l1][l2][n1][n2]
+                                ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += hs_L[l1][l2][n1][n2]
                                 qmetric_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] = qmat[l1][l2][n1][n2]
-                            ham_mat[l1][m1][n1][l2][m2][n2] += umat[n1][n2][l1][l2][m1][m2].real
+                            ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += umat[n1][n2][l1][l2][m1][m2].real
 
     lambda_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
     alphalong = np.zeros(node*LMAX**2)
     betalong = np.zeros(node*LMAX**2)
     revec = np.zeros(node*LMAX**2 * node * LMAX**2)
 
-    for e_num in range(0,100):
-        E = e_num * 0.1
+    for e_num in range(1,2):
+        E = e_num * 10
         lambda_mat = np.zeros((node*LMAX**2) * (node*LMAX**2),dtype = np.float64)
-        for l1 in range(LMAX):
-            for m1 in range (-l1,l1+1):
-                for n1 in range(node):
-                    for l2 in range(LMAX):
-                        for m2 in range(-l2,l2+1):
-                            for n2 in range(node):
-                                lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] = E - ham_mat[l1][m1][n1][l2][m2][n2]
+        lambda_mat = E - ham_mat
 
 
         info = solve_genev(node* LMAX**2,lambda_mat,qmetric_mat,alphalong,betalong,revec)
-        print(revec)
+
         print(info)
+        print(alphalong)
+        print(betalong)
+        #print(revec)
+        for i in range(node*LMAX**2):
+            print(revec[i*node*LMAX**2:(i+1) * node*LMAX**2])
 
 
     t2 = time.time()

@@ -19,8 +19,8 @@ def solve_genev(n,lambda_mat,qmetric_mat,alphalong,betalong,revec):
     n = ctypes.c_int32(n)
     LDVL = ctypes.c_int32(LDVL)
 
-    f.dggev_.argtypes = [ ctypes.POINTER(ctypes.c_char),
-                        ctypes.POINTER(ctypes.c_char),
+    f.dggev_.argtypes = [ ctypes.c_wchar_p,
+                        ctypes.c_wchar_p,
                         ctypes.POINTER(ctypes.c_int32),
                         np.ctypeslib.ndpointer(dtype=np.float64),
                         ctypes.POINTER(ctypes.c_int32),
@@ -40,7 +40,7 @@ def solve_genev(n,lambda_mat,qmetric_mat,alphalong,betalong,revec):
 
     f.dggev_.restype = ctypes.c_void_p
     f.dggev_(JOBVL, JOBVR, ctypes.byref(n), lambda_mat, ctypes.byref(n), qmetric_mat, ctypes.byref(n), alphalong, ALPHAI, betalong, VL, ctypes.byref(LDVL), revec, ctypes.byref(n), WORK, ctypes.byref(LWORK), ctypes.byref(INFO) ) 
-    info = info.value
+    info = INFO.value
     return  info
 
 if __name__ == "__main__" :
