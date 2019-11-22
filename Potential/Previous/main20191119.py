@@ -209,95 +209,72 @@ def main():
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
 
-    umat_av = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-    gridstart = 50
-    gridend = 60
-    gridrange = gridend - gridstart + 1
-    for ngrid in range(gridstart,gridend + 1):
-        t1 = time.time()
-        fw_u = open("umat_grid"+str(ngrid)+".dat",mode="w")
+    umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
+#    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
 
-        umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-        my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
-    
-        igridpx = ngrid
-        igridpy = ngrid
-        igridpz = ngrid
-    
-        ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
-        ixx,iyy,izz = np.meshgrid(ix,iy,iz)
-    
-        V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
-    
-    
-        #mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
-        #obj = mlab.volume_slice(V_ang_i)
-        #mlab.show()
-    
-        dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
-        dis2 = ixx **2 + iyy **2 + izz **2
-        theta = np.where( dis != 0., np.arccos(izz / dis), 0.)
-        phi = np.where( iyy**2 + ixx **2 != 0 , np.where(iyy >= 0, np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), np.pi + np.arccos(ixx / np.sqrt(ixx **2 + iyy **2))), 0.)
-        #phi = np.where( iyy != 0. , phi, 0.)
-        #phi = np.where(iyy > 0, phi,-phi)
-    #    region_t = np.where(dis < rofi[-1],1,0)
-        sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
+    my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+
+    igridpx = 50
+    igridpy = 50
+    igridpz = 50
+
+    ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
+    ixx,iyy,izz = np.meshgrid(ix,iy,iz)
+
+    V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+
+
+    #mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
+    #obj = mlab.volume_slice(V_ang_i)
+    #mlab.show()
+
+    dis = np.sqrt(ixx **2 + iyy **2 + izz **2)
+    dis2 = ixx **2 + iyy **2 + izz **2
+    theta = np.where( dis != 0., np.arccos(izz / dis), 0.)
+    phi = np.where( iyy**2 + ixx **2 != 0 , np.where(iyy >= 0, np.arccos(ixx / np.sqrt(ixx **2 + iyy **2)), np.pi + np.arccos(ixx / np.sqrt(ixx **2 + iyy **2))), 0.)
+    #phi = np.where( iyy != 0. , phi, 0.)
+    #phi = np.where(iyy > 0, phi,-phi)
+#    region_t = np.where(dis < rofi[-1],1,0)
+    sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
+    for l1 in range (LMAX):
+        for m1 in range (-l1,l1 + 1):
+            sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
+    g_ln_mat = np.zeros((node,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
+    for n1 in range (node):
         for l1 in range (LMAX):
-            for m1 in range (-l1,l1 + 1):
-                sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
-        g_ln_mat = np.zeros((node,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
-        for n1 in range (node):
+            my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
+            g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
+
+    fw_u = open("umat_nlm.dat",mode="w")
+
+    for n1 in range (node):
+        for n2 in range (node):
             for l1 in range (LMAX):
-                my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-                g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
-    
-    
-        for n1 in range (node):
-            for n2 in range (node):
-                for l1 in range (LMAX):
-                    for l2 in range (LMAX):
-                        if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
-                            print("error: L is differnt")
-                            sys.exit()
-                        # to avoid nan in region where it can not interpolate ie: dis > rofi
-                        g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
-                        for m1 in range (-l1,l1+1):
-                            for m2 in range (-l2,l2+1):
-                                #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                                umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where(dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
-                                #print(umat[n1][n2][l1][l2][m1][m2])
-        count = 0
-        for l1 in range (LMAX):
-            for l2 in range (LMAX):
-                for m1 in range (-l1,l1+1):
-                    for m2 in range (-l2,l2+1):
-                        for n1 in range (node):
-                            for n2 in range (node):
-                                fw_u.write(str(count))
-                                fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
-                                count += 1
-    
-        umat_av += umat
-    
-        fw_u.close()
-
-        t2 = time.time()
-        print("grid = ", ngrid, "time = ",t2 - t1)
-
-    
-    umat_av /= gridrange
+                for l2 in range (LMAX):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
+                        sys.exit()
+                    # to avoid nan in region where it can not interpolate ie: dis > rofi
+                    g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
+                    for m1 in range (-l1,l1+1):
+                        for m2 in range (-l2,l2+1):
+                            #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
+                            umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where(dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
+                            #print(umat[n1][n2][l1][l2][m1][m2])
     count = 0
-    fw_u_av = open("umat_grid_av"+str(gridstart)+"_"+str(gridend)+".dat",mode="w")
     for l1 in range (LMAX):
         for l2 in range (LMAX):
             for m1 in range (-l1,l1+1):
                 for m2 in range (-l2,l2+1):
                     for n1 in range (node):
                         for n2 in range (node):
-                            fw_u_av.write(str(count))
-                            fw_u_av.write("{:>15.8f}{:>15.8f}\n".format(umat_av[n1][n2][l1][l2][m1][m2].real,umat_av[n1][n2][l1][l2][m1][m2].imag))
+                            fw_u.write(str(count))
+                            fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
                             count += 1
-    fw_u_av.close()
+
+
+    fw_u.close()
+
     ham_mat = np.zeros((nstates * nstates),dtype = np.float64)
     qmetric_mat = np.zeros((nstates * nstates),dtype = np.float64)
     for l1 in range(LMAX):
@@ -309,7 +286,7 @@ def main():
                             if l1 == l2 and m1 == m2 :
                                 ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += hs_L[l1][l2][n1][n2]
                                 qmetric_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] = qmat[l1][l2][n1][n2]
-                            ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += umat_av[n1][n2][l1][l2][m1][m2].real
+                            #ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += umat[n1][n2][l1][l2][m1][m2].real
 
     lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
     alphalong = np.zeros(nstates)
@@ -324,9 +301,6 @@ def main():
         for i in range(nstates):
             lambda_mat[i + i * nstates] += E
         """
-        count = 0
-        fw_lam = open("lambda.dat",mode="w")
-
         for l1 in range(LMAX):
             for m1 in range (-l1,l1+1):
                 for n1 in range(node):
@@ -335,10 +309,7 @@ def main():
                             for n2 in range(node):
                                 if l1 == l2 and m1 == m2 :
                                     lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += Smat[l1][l2][n1][n2] * E
-                                fw_lam.write(str(count))
-                                fw_lam.write("{:>15.8f}\n".format(lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2]))
-                                count += 1
- 
+     
         
         info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,revec)
 
@@ -368,6 +339,10 @@ def main():
             fw_revec.write("\n")
         print("")
 
+
+
+    t2 = time.time()
+    print("time = ",t2 - t1)
 
 
 def grid (nx,ny,nz,region):

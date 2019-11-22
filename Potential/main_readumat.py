@@ -210,8 +210,9 @@ def main():
 #    mlab.show()
 
     umat_av = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-    gridstart = 50
-    gridend = 60
+    """
+    gridstart = 80
+    gridend = 85
     gridrange = gridend - gridstart + 1
     for ngrid in range(gridstart,gridend + 1):
         t1 = time.time()
@@ -283,7 +284,6 @@ def main():
 
         t2 = time.time()
         print("grid = ", ngrid, "time = ",t2 - t1)
-
     
     umat_av /= gridrange
     count = 0
@@ -297,7 +297,34 @@ def main():
                             fw_u_av.write(str(count))
                             fw_u_av.write("{:>15.8f}{:>15.8f}\n".format(umat_av[n1][n2][l1][l2][m1][m2].real,umat_av[n1][n2][l1][l2][m1][m2].imag))
                             count += 1
-    fw_u_av.close()
+ 
+    """
+    
+    fr_umat = open(sys.argv[1],mode="r")
+    umat_lines = fr_umat.readlines()
+    count = 0
+    for l1 in range (LMAX):
+        for l2 in range (LMAX):
+            for m1 in range (-l1,l1+1):
+                for m2 in range (-l2,l2+1):
+                    for n1 in range (node):
+                        for n2 in range (node):
+                            umat_line = umat_lines[count].split()
+                            umat_av[n1][n2][l1][l2][m1][m2] = complex(float(umat_line[1]), float(umat_line[2]))
+                            count += 1
+
+    count = 0
+    fw_u_av = open("umat_grid_av_2.dat",mode="w")
+    for l1 in range (LMAX):
+        for l2 in range (LMAX):
+            for m1 in range (-l1,l1+1):
+                for m2 in range (-l2,l2+1):
+                    for n1 in range (node):
+                        for n2 in range (node):
+                            fw_u_av.write(str(count))
+                            fw_u_av.write("{:>15.8f}{:>15.8f}\n".format(umat_av[n1][n2][l1][l2][m1][m2].real,umat_av[n1][n2][l1][l2][m1][m2].imag))
+                            count += 1
+ 
     ham_mat = np.zeros((nstates * nstates),dtype = np.float64)
     qmetric_mat = np.zeros((nstates * nstates),dtype = np.float64)
     for l1 in range(LMAX):
@@ -325,8 +352,7 @@ def main():
             lambda_mat[i + i * nstates] += E
         """
         count = 0
-        fw_lam = open("lambda.dat",mode="w")
-
+        fw_lam = open("lambda_2.dat",mode="w")
         for l1 in range(LMAX):
             for m1 in range (-l1,l1+1):
                 for n1 in range(node):
@@ -338,7 +364,8 @@ def main():
                                 fw_lam.write(str(count))
                                 fw_lam.write("{:>15.8f}\n".format(lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2]))
                                 count += 1
- 
+
+     
         
         info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,revec)
 
