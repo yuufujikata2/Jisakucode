@@ -15,13 +15,15 @@ from mayavi import mlab
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import sph_harm
 from call_genev import solve_genev
+from make_V_radial_new import make_V_radial_new
 
 EPSVAL = 1.e-20
 
 def main():
     # make environment
     t1 = time.time()
-    pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
+    pot_region = np.array((2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3)))
+    bound_rad = pot_region / 2
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
@@ -38,7 +40,7 @@ def main():
 
     #log mesh
     #a = np.log(2) / (nr - 1) 
-    a= 0.03
+    a= 0.001
     b = radius / (np.e**(a * ( nr - 1)) - 1)
     rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
 
@@ -48,6 +50,8 @@ def main():
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
     vofi = np.array (V_radial)  # select method of surface integral
+
+    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False)
 
     """
     #test 20191029
@@ -177,7 +181,7 @@ def main():
 
 
     #make not spherical potential
-    my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
+    my_radial_interfunc = interpolate.interp1d(rofi, V_radial_new)
 
     V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx **2 + yy **2 + zz **2)),0. )
     """

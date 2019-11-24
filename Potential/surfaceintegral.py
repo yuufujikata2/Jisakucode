@@ -34,7 +34,7 @@ def surfaceintegral(x,y,z,r,V,method="lebedev_f",potshow_f=False):
     if potshow_f :
         potentialshow(r,V_radial)
 
-    return V_radial
+    return np.array(V_radial)
 
 class SI_lebedev_f():
     def __init__(self,num):

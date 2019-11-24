@@ -9,17 +9,19 @@ from makepotential import makepotential
 from basis import Basis
 from integrate import integrate
 from scipy import interpolate
-from scipy.integrate import tplquad
+from scipy.integrate import tplquad,trapz
 from scipy.integrate import simps,cumtrapz
 from mayavi import mlab
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import sph_harm
+from make_V_radial_new import make_V_radial_new
 
 EPSVAL = 1.e-20
 
 def main():
     # make environment
-    pot_region = (2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3))
+    pot_region = np.array((2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3)))
+    bound_rad = pot_region / 2
     radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
     region = (radius,radius,radius)
     nr = 201
@@ -45,6 +47,8 @@ def main():
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
     vofi = np.array (V_radial)  # select method of surface integral
+
+    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False)
 
     # make basis
     
@@ -123,7 +127,7 @@ def main():
 
 
     #make not spherical potential
-    my_radial_interfunc = interpolate.interp1d(rofi, V_radial)
+    my_radial_interfunc = interpolate.interp1d(rofi, V_radial_new)
 
     V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
     """
@@ -170,7 +174,7 @@ def main():
         igridpy = ngrid  
         igridpz = ngrid 
     
-        ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
+        ix,iy,iz = grid(igridpx,igridpy,igridpz,pot_region)
         ixx,iyy,izz = np.meshgrid(ix,iy,iz)
     
         V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
@@ -207,7 +211,10 @@ def main():
                         for m1 in range (-l1,l1+1):
                             for m2 in range (-l2,l2+1):
                                 #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                                umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * region[0] * 2 * region[1] * 2 * region[2]) / (igridpx * igridpy * igridpz)
+                                #umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * pot_region[0] * 2 * pot_region[1] * 2 * pot_region[2]) / (igridpx * igridpy * igridpz)
+                                #umat[n1][n2][l1][l2][m1][m2] = trapz(trapz(trapz(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
+                                umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
+                                #umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2,even="first"),x=iy,axis=1,even="first"),x=ix,axis=0,even="first")
                                 fw_grid.write("{:>13.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
         count = 0
         for l1 in range (LMAX):
