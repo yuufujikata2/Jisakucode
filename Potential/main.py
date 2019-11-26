@@ -51,7 +51,8 @@ def main():
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
     vofi = np.array (V_radial)  # select method of surface integral
 
-    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False)
+    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=True)
+    sys.exit()
 
     """
     #test 20191029
@@ -222,7 +223,7 @@ def main():
         fw_u = open("umat_grid"+str(ngrid)+".dat",mode="w")
 
         umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-        my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+        #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
     
         igridpx = ngrid
         igridpy = ngrid
@@ -231,7 +232,10 @@ def main():
         ix,iy,iz = grid(igridpx,igridpy,igridpz,region)
         ixx,iyy,izz = np.meshgrid(ix,iy,iz)
     
-        V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+        #V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+        V_ang_i = np.zeros((igridpx,igridpy,igridpz))
+        V_ang_i = -1. - my_radial_interfunc(np.sqrt(ixx * ixx + iyy * iyy + izz * izz))
+
     
     
         #mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)

@@ -46,15 +46,15 @@ def main():
 
     # surface integral
     V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
-    vofi = np.array (V_radial)  # select method of surface integral
 
     V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False)
+    vofi = np.array (V_radial_new)  
 
     # make basis
     
     node_open = 1
-    node_close = 2
-    LMAX = 4
+    node_close = 4
+    LMAX = 8
 
     all_basis = []
 
@@ -66,7 +66,7 @@ def main():
         for node in range(node_open):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
@@ -76,7 +76,7 @@ def main():
         for node in range(node_close):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
@@ -160,7 +160,7 @@ def main():
 #    mlab.show()
 
     fw_grid = open("umat_grid_all.dat",mode = "w")
-    for ngrid in range(20,100):
+    for ngrid in range(5,50):
         fw_grid_2 = open("umat_grid"+str(ngrid)+".dat",mode="w")
         fw_grid.write(str(ngrid)+" ") 
         t1 = time.time()
@@ -168,7 +168,7 @@ def main():
         umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
     #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
     
-        my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
+        #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
     
         igridpx = ngrid
         igridpy = ngrid  
@@ -177,7 +177,10 @@ def main():
         ix,iy,iz = grid(igridpx,igridpy,igridpz,pot_region)
         ixx,iyy,izz = np.meshgrid(ix,iy,iz)
     
-        V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+        #V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+        V_ang_i = np.zeros((igridpx,igridpy,igridpz))
+        V_ang_i = -1. - my_radial_interfunc(np.sqrt(ixx * ixx + iyy * iyy + izz * izz))
+
     
         #mlab.points3d(V_ang_i,scale_factor=0.4)
     #    mlab.contour3d(V_ang_i,color = (1,1,1),opacity = 0.1)
@@ -212,10 +215,11 @@ def main():
                             for m2 in range (-l2,l2+1):
                                 #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
                                 #umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * pot_region[0] * 2 * pot_region[1] * 2 * pot_region[2]) / (igridpx * igridpy * igridpz)
-                                #umat[n1][n2][l1][l2][m1][m2] = trapz(trapz(trapz(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
-                                umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
+                                umat[n1][n2][l1][l2][m1][m2] = trapz(trapz(trapz(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
+                                #umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
                                 #umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2,even="first"),x=iy,axis=1,even="first"),x=ix,axis=0,even="first")
                                 fw_grid.write("{:>13.8f}".format(umat[n1][n2][l1][l2][m1][m2].real))
+
         count = 0
         for l1 in range (LMAX):
             for l2 in range (LMAX):
@@ -227,7 +231,6 @@ def main():
                                 fw_grid_2.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
                                 count += 1
                                     
-    
         t2 = time.time()
         fw_grid.write("\n")
         print("grid = ", ngrid, "time = ",t2 - t1)
