@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from surfaceintegral import surfaceintegral
 from call_rseq import rseq
 from makepotential import makepotential
-from basis import Basis
+from basis import make_basis
 from integrate import integrate
 from scipy import interpolate
 from scipy.integrate import tplquad,trapz
@@ -14,110 +14,55 @@ from scipy.integrate import simps,cumtrapz
 from mayavi import mlab
 from scipy.interpolate import RegularGridInterpolator
 from scipy.special import sph_harm
+from call_genev import solve_genev
 from make_V_radial_new import make_V_radial_new
+from make_environment import make_environment
 
 EPSVAL = 1.e-20
 
 def main():
     # make environment
-    pot_region = np.array((2/np.sqrt(3),2/np.sqrt(3),2/np.sqrt(3)))
-    bound_rad = pot_region / 2
-    radius = np.sqrt(pot_region[0] **2 + pot_region[1] **2 + pot_region[2] **2 )
-    region = (radius,radius,radius)
-    nr = 201
-    gridpx = 200 
-    gridpy = 200  
-    gridpz = 200  
-    x,y,z = grid(gridpx,gridpy,gridpz,region)
-    xx, yy, zz = np.meshgrid(x,y,z)
-
-    #make mesh
-
-    #linear mesh
-    #r =np.linspace(0.0001,region,nr)
-
-    #log mesh
-    a = np.log(2) / (nr - 1) 
-    b = radius / (np.e**(a * ( nr - 1)) - 1)
-    rofi = np.array([b * (np.e**(a * i) - 1) for i in range(nr)])
+    t1 = time.time()
+  
+    pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX = make_environment()
 
     # make potential
-    V = makepotential(xx,yy,zz,pot_region,pottype="cubic",potbottom=-1,potshow_f=False)
+    V = makepotential(xx,yy,zz,pot_region,pot_type=pot_type,pot_bottom=pot_bottom,pot_show_f=pot_show_f)
 
     # surface integral
-    V_radial = surfaceintegral(x,y,z,rofi,V,method="lebedev_py",potshow_f=False)
+    V_radial = surfaceintegral(x,y,z,rofi,V,si_method=si_method,radial_pot_show_f=radial_pot_show_f)
 
-    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False)
-    vofi = np.array (V_radial_new)  
+    V_radial_new = make_V_radial_new(V_radial,rofi,pot_region,bound_rad,new_radial_pot_show_f=new_radial_pot_show_f)
+
+    vofi = np.array (V_radial_new)  # select method of surface integral
 
     # make basis
-    
-    node_open = 1
-    node_close = 4
-    LMAX = 8
+    node = node_open + node_close
+    nstates = node * LMAX**2
 
-    all_basis = []
-
-    for lvalsh in range (LMAX):
-        l_basis = []
-        # for open channel
-        val = 1.
-        slo = 0.
-        for node in range(node_open):
-            basis = Basis(nr)
-            emin = -10.
-            emax = 1000.
-            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
-            l_basis.append(basis)
-
-        # for close channel
-        val = 0.
-        slo = -1.
-        for node in range(node_close):
-            basis = Basis(nr)
-            emin = -10.
-            emax = 1000.
-            basis.make_basis(a,b,emin,emax,lvalsh,node,nr,rofi,slo,vofi,val)
-            l_basis.append(basis)
-
-        all_basis.append(l_basis)
-
-    with open ("wavefunc.dat", mode = "w") as fw_w :
-        fw_w.write("#r,   l, node, open or close = ") 
-        for l_basis in all_basis:
-            for nyu_basis in l_basis:
-                fw_w.write(str(nyu_basis.l))
-                fw_w.write(str(nyu_basis.node))
-                if nyu_basis.open:
-                    fw_w.write("open")
-                else:
-                    fw_w.write("close")
-                fw_w.write("    ")
-        fw_w.write("\n")
-
-        for i in range(nr):
-            fw_w.write("{:>13.8f}".format(rofi[i]))
-            for l_basis in all_basis:
-                for nyu_basis in l_basis:
-                    fw_w.write("{:>13.8f}".format(nyu_basis.g[i]))
-            fw_w.write("\n")
-
-    hsmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close),dtype = np.float64)
-    lmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
-    qmat = np.zeros((LMAX,LMAX,node_open + node_close,node_open + node_close), dtype = np.float64)
+    all_basis = make_basis(LMAX,node_open,node_close,nr,a,b,rofi,vofi)
+ 
+    #make spherical matrix element
+    Smat = np.zeros((LMAX,LMAX,node,node),dtype = np.float64)
+    hsmat = np.zeros((LMAX,LMAX,node,node),dtype = np.float64)
+    lmat = np.zeros((LMAX,LMAX,node,node), dtype = np.float64)
+    qmat = np.zeros((LMAX,LMAX,node,node), dtype = np.float64)
 
     for l1 in range (LMAX):
         for l2 in range (LMAX):
             if l1 != l2 :
                 continue
-            for n1 in range (node_open + node_close):
-                for n2 in range (node_open + node_close):
+            for n1 in range (node):
+                for n2 in range (node):
                     if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
                         print("error: L is differnt")
                         sys.exit()
-                    hsmat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr) * all_basis[l1][n1].e
+                    Smat[l1][l2][n1][n2] = integrate(all_basis[l1][n1].g[:nr] * all_basis[l2][n2].g[:nr],rofi,nr)
+                    hsmat[l1][l2][n1][n2] = Smat[l1][l2][n1][n2] * all_basis[l2][n2].e
                     lmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].slo
                     qmat[l1][l2][n1][n2] = all_basis[l1][n1].val * all_basis[l2][n2].val
+    print("\nSmat")
+    print(Smat)
     print ("\nhsmat")
     print (hsmat)
     print ("\nlmat")
@@ -125,11 +70,31 @@ def main():
     print ("\nqmat")
     print (qmat)
 
+    hs_L = np.zeros((LMAX,LMAX,node,node))
+    """
+    for l1 in range(LMAX):
+        for n1 in range(node):
+            for l2 in range(LMAX):
+                for n2 in range(node):
+                    print("{:>8.4f}".format(lmat[l1][l2][n1][n2]),end="")
+            print("")
+    print("")
+    """
+    print("hs_L")
+    for l1 in range(LMAX):
+        for n1 in range(node):
+            for l2 in range(LMAX):
+                for n2 in range(node):
+                    hs_L[l1][l2][n1][n2] = hsmat[l1][l2][n1][n2] + lmat[l1][l2][n1][n2]
+                    print("{:>8.4f}".format(hs_L[l1][l2][n1][n2]),end="")
+            print("")
+    
+
 
     #make not spherical potential
     my_radial_interfunc = interpolate.interp1d(rofi, V_radial_new)
 
-    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx * xx + yy * yy + zz * zz)),0. )
+    V_ang = np.where(np.sqrt(xx * xx + yy * yy + zz * zz) < rofi[-1] , V - my_radial_interfunc(np.sqrt(xx **2 + yy **2 + zz **2)),0. )
     """
     for i in range(gridpx):
         for j in range(gridpy):
@@ -165,11 +130,8 @@ def main():
         fw_grid.write(str(ngrid)+" ") 
         t1 = time.time()
     
-        umat = np.zeros((node_open + node_close,node_open + node_close,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
-    #    umat_t = np.zeros((LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1,node_open + node_close,node_open + node_close), dtype = np.complex64)
-    
-        #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
-    
+        umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
+
         igridpx = ngrid
         igridpy = ngrid  
         igridpz = ngrid 
@@ -177,7 +139,9 @@ def main():
         ix,iy,iz = grid(igridpx,igridpy,igridpz,pot_region)
         ixx,iyy,izz = np.meshgrid(ix,iy,iz)
     
+        #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
         #V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
+
         V_ang_i = np.zeros((igridpx,igridpy,igridpz))
         V_ang_i = -1. - my_radial_interfunc(np.sqrt(ixx * ixx + iyy * iyy + izz * izz))
 
@@ -196,14 +160,14 @@ def main():
         for l1 in range (LMAX):
             for m1 in range (-l1,l1 + 1):
                 sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
-        g_ln_mat = np.zeros((node_open + node_close,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
-        for n1 in range (node_open + node_close):
+        g_ln_mat = np.zeros((node,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
+        for n1 in range (node):
             for l1 in range (LMAX):
                 my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
                 g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
     
-        for n1 in range (node_open + node_close):
-            for n2 in range (node_open + node_close):
+        for n1 in range (node):
+            for n2 in range (node):
                 for l1 in range (LMAX):
                     for l2 in range (LMAX):
                         if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
