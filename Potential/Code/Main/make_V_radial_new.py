@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False):
+def make_V_radial_new(V_radial,rofi,pot_region,bound_rad,new_radial_pot_show_f=False):
     r1 = pot_region[0] 
     r2 = bound_rad[0]
     r1_i = 0
@@ -30,7 +30,7 @@ def make_V_radial_new(V_radial,rofi,pot_region,bound_rad,pot_show_f=False):
         else:
             V_radial_new[i] = 0.
 
-    if pot_show_f:
+    if new_radial_pot_show_f:
         plt.plot(rofi,V_radial_new,marker=".")
         plt.plot(rofi,V_radial,marker=".")
         plt.show()

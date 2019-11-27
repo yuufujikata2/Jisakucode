@@ -8,15 +8,15 @@ import quadpy
 
 lebedev_num_list = (6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974,1202,1454,1730,2030,2354,2702,3074,3470,3890,4334,4802,5294,5810)
 
-def surfaceintegral(x,y,z,r,V,method="lebedev_f",potshow_f=False):
+def surfaceintegral(x,y,z,r,V,si_method="lebedev_f",radial_pot_show_f=False):
     fw = open("V_radial.dat",mode="w")
     my_inter_func = RegularGridInterpolator((x, y, z), V)
     V_radial = []
-    if method == "lebedev_f" :
+    if si_method == "lebedev_f" :
         surface_int_method = SI_lebedev_f(-1)
-    elif method == "lebedev_py" :
+    elif si_method == "lebedev_py" :
         surface_int_method = SI_lebedev_py()
-    elif method == "rasen" :
+    elif si_method == "rasen" :
         surface_int_method = SI_rasen(5000)
     else :
         print ("error: There is no method entered")
@@ -31,7 +31,7 @@ def surfaceintegral(x,y,z,r,V,method="lebedev_f",potshow_f=False):
 
     fw.close()
 
-    if potshow_f :
+    if radial_pot_show_f :
         potentialshow(r,V_radial)
 
     return np.array(V_radial)
