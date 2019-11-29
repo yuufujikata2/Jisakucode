@@ -138,7 +138,7 @@ def main():
     gauss_py,gauss_wy = np.polynomial.legendre.leggauss(igridpy)
     gauss_pz,gauss_wz = np.polynomial.legendre.leggauss(igridpz)
 
-    ix,iy,iz = gauss_px * pot_region[0],gauss_py * pot_region[0],gauss_pz * pot_region[0]
+    ix,iy,iz = gauss_px * pot_region[0],gauss_py * pot_region[1],gauss_pz * pot_region[2]
     ixx,iyy,izz = np.meshgrid(ix,iy,iz)
 
     gauss_weight = np.zeros((igridpx,igridpy,igridpz))
