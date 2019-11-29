@@ -15,7 +15,7 @@ def make_basis(LMAX,node_open,node_close,nr,a,b,rofi,vofi):
         for no in range(node_open):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.solve_rseq(a,b,emin,emax,lvalsh,no,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
@@ -25,7 +25,7 @@ def make_basis(LMAX,node_open,node_close,nr,a,b,rofi,vofi):
         for nc   in range(node_close):
             basis = Basis(nr)
             emin = -10.
-            emax = 100.
+            emax = 1000.
             basis.solve_rseq(a,b,emin,emax,lvalsh,nc,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 

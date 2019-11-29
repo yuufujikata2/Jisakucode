@@ -19,6 +19,7 @@ from make_V_radial_new import make_V_radial_new
 from make_environment import make_environment
 
 EPSVAL = 1.e-20
+BETAZERO = 1.e-8
 
 def main():
     # make environment
@@ -225,10 +226,13 @@ def main():
     lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
     alphalong = np.zeros(nstates)
     betalong = np.zeros(nstates)
-    revec = np.zeros(nstates * nstates)
+    alpha = np.zeros(LMAX**2)
+    beta = np.zeros(LMAX**2)
+    reveclong = np.zeros(nstates * nstates)
+    revec = np.zeros((LMAX**2,nstates))
 
     for e_num in range(1,2):
-        E = e_num * 10
+        E = e_num * 1
         lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
         lambda_mat -= ham_mat
         """
@@ -249,9 +253,10 @@ def main():
                                 fw_lam.write(str(count))
                                 fw_lam.write("{:>15.8f}\n".format(lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2]))
                                 count += 1
+        fw_lam.close()
  
         
-        info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,revec)
+        info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,reveclong)
 
         print("info = ",info)
         print("alphalong")
@@ -263,9 +268,21 @@ def main():
         k = 0
         jk = np.zeros(nstates,dtype=np.int32) 
         for i in range(nstates):
-            if betalong[i] != 0. :
+            if abs(betalong[i]) > BETAZERO :
                 jk[k] = i
                 k += 1
+
+        if k != LMAX**2:
+            print(" main PANIC: solution of genev has rank k != nchannels ")
+            sys.exit()
+
+        for k in range(LMAX**2):
+            j = jk[k]
+            alpha[k] = alphalong[j]
+            beta[k]  = betalong[j]
+            revec[k] = reveclong[j * nstates : (j + 1) * nstates]
+
+
 
 
         fw_revec = open("revec.dat",mode="w")
@@ -273,11 +290,15 @@ def main():
         for j in range(nstates):
             fw_revec.write("{:>4}".format(j))
             for i in range(LMAX**2):
-                fw_revec.write("{:>13.8f}".format(revec[j+jk[i]*nstates]))
-                print("{:>11.6f}".format(revec[j+jk[i]*nstates]),end="")
+                fw_revec.write("{:>13.8f}".format(revec[i][j]))
+                print("{:>11.6f}".format(revec[i][j]),end="")
             print("")
             fw_revec.write("\n")
         print("")
+        fw_revec.close()
+
+
+
 
 
 
