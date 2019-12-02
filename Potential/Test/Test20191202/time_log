@@ -1,0 +1,4 @@
+make environment, make basis and calculate spherical matrix element
+time =  0.37083673s
+calculate U-matrix
+grid = 10    time =  0.2813251s

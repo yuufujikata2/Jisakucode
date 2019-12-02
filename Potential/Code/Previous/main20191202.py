@@ -19,11 +19,9 @@ from make_V_radial_new import make_V_radial_new
 from make_environment import make_environment
 
 EPSVAL = 1.e-20
-BETAZERO = 1.e-8
 
 def main():
     # make environment
-    fw_t = open("time_log",mode="w")
     t1 = time.time()
   
     pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX = make_environment()
@@ -92,10 +90,6 @@ def main():
             print("")
     
 
-    t2 = time.time()
-    fw_t.write("make environment, make basis and calculate spherical matrix element\n")
-    fw_t.write("time = {:>11.8}s\n".format(t2-t1))
-    t1 = time.time()
 
     #make not spherical potential
     my_radial_interfunc = interpolate.interp1d(rofi, V_radial_new)
@@ -130,28 +124,17 @@ def main():
 #    obj = mlab.volume_slice(V_ang)
 #    mlab.show()
 
-    ngrid = 10
-    fw_u = open("umat_gauss.dat",mode="w")
+    ngrid = 20
+    fw_u = open("umat_grid"+str(ngrid)+".dat",mode="w")
 
-    umat = np.zeros((LMAX,2 * LMAX + 1,node,LMAX,2 * LMAX + 1,node), dtype = np.complex64)
-
+    umat = np.zeros((node,node,LMAX,LMAX,2 * LMAX + 1,2 * LMAX + 1), dtype = np.complex64)
 
     igridpx = ngrid
     igridpy = ngrid
     igridpz = ngrid
 
-    gauss_px,gauss_wx = np.polynomial.legendre.leggauss(igridpx)
-    gauss_py,gauss_wy = np.polynomial.legendre.leggauss(igridpy)
-    gauss_pz,gauss_wz = np.polynomial.legendre.leggauss(igridpz)
-
-    ix,iy,iz = gauss_px * pot_region[0],gauss_py * pot_region[1],gauss_pz * pot_region[2]
+    ix,iy,iz = grid(igridpx,igridpy,igridpz,pot_region)
     ixx,iyy,izz = np.meshgrid(ix,iy,iz)
-
-    gauss_weight = np.zeros((igridpx,igridpy,igridpz))
-    for i in range(igridpx):
-        for j in range(igridpy):
-            for k in range(igridpz):
-                gauss_weight[i][j][k] = gauss_wx[i] * gauss_wy[j] * gauss_wz[k]
 
     #my_V_ang_inter_func = RegularGridInterpolator((x, y, z), V_ang)
     #V_ang_i = my_V_ang_inter_func((ixx,iyy,izz))
@@ -173,51 +156,32 @@ def main():
     #phi = np.where(iyy > 0, phi,-phi)
 #    region_t = np.where(dis < rofi[-1],1,0)
     sph_harm_mat = np.zeros((LMAX,2 * LMAX + 1, igridpx,igridpy,igridpz),dtype = np.complex64)
-    g_V_g = np.zeros((LMAX,node,LMAX,node,igridpx,igridpy,igridpz))
     for l1 in range (LMAX):
         for m1 in range (-l1,l1 + 1):
             sph_harm_mat[l1][m1] = np.where(dis != 0., sph_harm(m1,l1,phi,theta),0.)
-    g_ln_mat = np.zeros((LMAX,node,igridpx,igridpy,igridpz),dtype = np.float64)
-    for l1 in range (LMAX):
-        for n1 in range (node):
+    g_ln_mat = np.zeros((node,LMAX,igridpx,igridpy,igridpz),dtype = np.float64)
+    for n1 in range (node):
+        for l1 in range (LMAX):
             my_radial_g_inter_func = interpolate.interp1d(rofi,all_basis[l1][n1].g[:nr])
-            g_ln_mat[l1][n1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
+            g_ln_mat[n1][l1] = my_radial_g_inter_func(np.sqrt(ixx **2 + iyy **2 + izz **2))
 
-    for l1 in range (LMAX):
-        for n1 in range (node):
-            for l2 in range (LMAX):
-                for n2 in range (node):
+
+    for n1 in range (node):
+        for n2 in range (node):
+            for l1 in range (LMAX):
+                for l2 in range (LMAX):
+                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
+                        print("error: L is differnt")
+                        sys.exit()
                     # to avoid nan in region where it can not interpolate ie: dis > rofi
-                    g_V_g[l1][n1][l2][n2] = np.where(dis < rofi[-1], g_ln_mat[l1][n1] * V_ang_i * g_ln_mat[l2][n2], 0.)
-
-    for l1 in range (LMAX):
-        for m1 in range (-l1,l1+1):
-            for l2 in range (l1+1):
-                for m2 in range (-l2,l2+1):
-                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
-                        print("error: L is differnt")
-                        sys.exit()
-                    for n1 in range (node):
-                        for n2 in range (node):
+                    g_V_g = np.where(dis < rofi[-1], g_ln_mat[n1][l1] * V_ang_i * g_ln_mat[n2][l2], 0.)
+                    for m1 in range (-l1,l1+1):
+                        for m2 in range (-l2,l2+1):
                             #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][m1][n1][l2][m2][n2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g[l1][n1][l2][n2] * sph_harm_mat[l2][m2] / dis2 * gauss_weight, 0.)) * pot_region[0] * pot_region[1] * pot_region[2] 
+                            #umat[n1][n2][l1][l2][m1][m2] = np.sum(np.where( dis2 != 0., sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2, 0.)) * (2 * pot_region[0] * 2 * pot_region[1] * 2 * pot_region[2]) / (igridpx * igridpy * igridpz)
+                            umat[n1][n2][l1][l2][m1][m2] = trapz(trapz(trapz(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
+                            #umat[n1][n2][l1][l2][m1][m2] = simps(simps(simps(np.where(dis2 != 0. ,sph_harm_mat[l1][m1].conjugate() * g_V_g * sph_harm_mat[l2][m2] / dis2,0),x=iz,axis=2),x=iy,axis=1),x=ix,axis=0)
                             #print(umat[n1][n2][l1][l2][m1][m2])
-
-    for l1 in range (LMAX):
-        for m1 in range (-l1,l1+1):
-            for l2 in range (l1+1,LMAX):
-                for m2 in range (-l2,l2+1):
-                    if all_basis[l1][n1].l != l1 or all_basis[l2][n2].l != l2:
-                        print("error: L is differnt")
-                        sys.exit()
-                    for n1 in range (node):
-                        for n2 in range (node):
-                            #print("n1 = {} n2 = {} l1 = {} l2 = {} m1 = {} m2 = {}".format(n1,n2,l1,l2,m1,m2))
-                            umat[l1][m1][n1][l2][m2][n2] = umat[l2][m2][n2][l1][m1][n1].conjugate()
-                            #print(umat[n1][n2][l1][l2][m1][m2])
- 
-
-
     count = 0
     for l1 in range (LMAX):
         for l2 in range (LMAX):
@@ -226,15 +190,14 @@ def main():
                     for n1 in range (node):
                         for n2 in range (node):
                             fw_u.write(str(count))
-                            fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[l1][m1][n1][l2][m2][n2].real,umat[l1][m1][n1][l2][m2][n2].imag))
+                            fw_u.write("{:>15.8f}{:>15.8f}\n".format(umat[n1][n2][l1][l2][m1][m2].real,umat[n1][n2][l1][l2][m1][m2].imag))
                             count += 1
 
 
     fw_u.close()
 
     t2 = time.time()
-    fw_t.write("calculate U-matrix\n")
-    fw_t.write("grid = {:<5} time ={:>11.8}s\n".format(ngrid,t2 - t1))
+    print("grid = ", ngrid, "time = ",t2 - t1)
 
     
     ham_mat = np.zeros((nstates * nstates),dtype = np.float64)
@@ -248,19 +211,15 @@ def main():
                             if l1 == l2 and m1 == m2 :
                                 ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += hs_L[l1][l2][n1][n2]
                                 qmetric_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] = qmat[l1][l2][n1][n2]
-                            ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += umat[l1][m1][n1][l2][m2][n2].real
+                            ham_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2] += umat[n1][n2][l1][l2][m1][m2].real
 
     lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
     alphalong = np.zeros(nstates)
     betalong = np.zeros(nstates)
-    alpha = np.zeros(LMAX**2)
-    beta = np.zeros(LMAX**2)
-    reveclong = np.zeros(nstates * nstates)
-    revec = np.zeros((LMAX**2,nstates))
-    t1 = time.time()
+    revec = np.zeros(nstates * nstates)
 
     for e_num in range(1,2):
-        E = e_num * 1
+        E = e_num * 10
         lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
         lambda_mat -= ham_mat
         """
@@ -281,10 +240,9 @@ def main():
                                 fw_lam.write(str(count))
                                 fw_lam.write("{:>15.8f}\n".format(lambda_mat[l1 **2 * node * LMAX**2 * node + (l1 + m1) * node * LMAX**2 * node + n1 * LMAX**2 * node + l2 **2 * node + (l2 + m2) * node + n2]))
                                 count += 1
-        fw_lam.close()
  
         
-        info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,reveclong)
+        info = solve_genev(nstates,lambda_mat,qmetric_mat,alphalong,betalong,revec)
 
         print("info = ",info)
         print("alphalong")
@@ -296,21 +254,9 @@ def main():
         k = 0
         jk = np.zeros(nstates,dtype=np.int32) 
         for i in range(nstates):
-            if abs(betalong[i]) > BETAZERO :
+            if betalong[i] != 0. :
                 jk[k] = i
                 k += 1
-
-        if k != LMAX**2:
-            print(" main PANIC: solution of genev has rank k != nchannels ")
-            sys.exit()
-
-        for k in range(LMAX**2):
-            j = jk[k]
-            alpha[k] = alphalong[j]
-            beta[k]  = betalong[j]
-            revec[k] = reveclong[j * nstates : (j + 1) * nstates]
-
-
 
 
         fw_revec = open("revec.dat",mode="w")
@@ -318,20 +264,11 @@ def main():
         for j in range(nstates):
             fw_revec.write("{:>4}".format(j))
             for i in range(LMAX**2):
-                fw_revec.write("{:>13.8f}".format(revec[i][j]))
-                print("{:>11.6f}".format(revec[i][j]),end="")
+                fw_revec.write("{:>13.8f}".format(revec[j+jk[i]*nstates]))
+                print("{:>11.6f}".format(revec[j+jk[i]*nstates]),end="")
             print("")
             fw_revec.write("\n")
         print("")
-        fw_revec.close()
-
-        t2 = time.time()
-        fw_t.write("solve eigenvalue progrem\n")
-        fw_t.write("time = {:>11.8}s\n".format(t2-t1))
-        fw_t.close()
-
-
-
 
 
 
