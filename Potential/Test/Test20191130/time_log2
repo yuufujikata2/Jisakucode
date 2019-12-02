@@ -1,0 +1,6 @@
+make environment, make basis and calculate spherical matrix element
+time =  0.36833072s
+calculate U-matrix
+grid = 10    time = 0.34966755s
+solve eigenvalue progrem
+time = 0.039287806s

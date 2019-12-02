@@ -23,6 +23,7 @@ BETAZERO = 1.e-8
 
 def main():
     # make environment
+    fw_t = open("time_log",mode="w")
     t1 = time.time()
   
     pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX = make_environment()
@@ -90,6 +91,11 @@ def main():
                     print("{:>8.4f}".format(hs_L[l1][l2][n1][n2]),end="")
             print("")
     
+
+    t2 = time.time()
+    fw_t.write("make environment, make basis and calculate spherical matrix element\n")
+    fw_t.write("time = {:>11.8}s\n".format(t2-t1))
+    t1 = time.time()
 
 
     #make not spherical potential
@@ -207,7 +213,10 @@ def main():
     fw_u.close()
 
     t2 = time.time()
-    print("grid = ", ngrid, "time = ",t2 - t1)
+    fw_t.write("calculate U-matrix\n")
+    fw_t.write("grid = {:<5} time ={:>11.8}s\n".format(ngrid,t2 - t1))
+    t1 = time.time()
+
 
     
     ham_mat = np.zeros((nstates * nstates),dtype = np.float64)
@@ -297,6 +306,10 @@ def main():
         print("")
         fw_revec.close()
 
+        t2 = time.time()
+        fw_t.write("solve eigenvalue progrem\n")
+        fw_t.write("time = {:>11.8}s\n".format(t2-t1))
+        fw_t.close()
 
 
 
