@@ -2,6 +2,7 @@ import numpy as np
 import sys
 from scipy.interpolate import RegularGridInterpolator
 import call_lebedev
+import matplotlib.pyplot as plt
 
 lebedev_num_list = (6,14,26,38,50,74,86,110,146,170,194,230,266,302,350,434,590,770,974,1202,1454,1730,2030,2354,2702,3074,3470,3890,4334,4802,5294,5810)
 
@@ -32,3 +33,8 @@ def jump_index(V_ang,x,y,z,num,nr,rofi):
         print(Vomega_r_dr[1730][r])
     for r in range(nr):
         print(Vomega_r_dr2[1730][r])
+
+    plt.plot(rofi,Vomega_r[1730],marker=".")
+    plt.plot(rofi,Vomega_r_dr[1730]/20,marker=".")
+    plt.plot(rofi,Vomega_r_dr2[1730]/500,marker=".")
+    plt.show()
