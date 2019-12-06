@@ -3,11 +3,12 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy import interpolate
 import copy
+from scipy.integrate import simps
 
 def main():
     args = sys.argv
     argc = len(args)
-    
+
     print("Please input start row (default = 1 (\"/\"))")
     input_startrow = input(">>")
     if input_startrow == "/":
@@ -19,8 +20,8 @@ def main():
     if input_lastrow == "/":
         maxrows = None
     else:
-        maxrows = int (input_lastrow) - skiprows 
-    print("Please input using culmns (ex:1 2 3 or \"/\")")
+        maxrows = int (input_lastrow) - skiprows
+    print("Please input using culmns. First one is x and other are y (ex: 1 2 3   \"/\")")
     input_column = input(">>")
     if input_column == "/":
         column = None
@@ -29,12 +30,19 @@ def main():
         for i in range(len(column)) :
             column[i] = int(column[i]) -1
 
+    print("Please input xmin and xmax")
+    input_xrange = input(">>").split()
+    xmin = float(input_xrange[0])
+    xmax = float(input_xrange[1])
+
+    """
     print("Please input ratio of sum data (dfalut = 1:1:1...)")
     input_sumratio = input (">>").split()
     if input_sumratio == "/":
         sumratio = [1 for i in  range(argc -1)]
     else :
         sumratio = [int(i) for i in input_sumratio]
+    """
 
     all_data = []
     for i in range (1,argc):
@@ -43,12 +51,15 @@ def main():
 
     Data.newx = copy.deepcopy(all_data[0].x)
     for i in range(len(all_data)):
-        all_data[i].hairetusoroe()
-    print("x_min = ",Data.newx[0])
-    print("x_max = ",Data.newx[-1])
+        count1,count2 = all_data[i].integraterange(xmin,xmax)
 
     for i in range(len(all_data)) :
         all_data[i].interpolate()
+    
+    for i in range(len(all_data)):
+        print(all_data[i].integrate())
+        
+
 
     fw = open("newdata.dat",mode="w")
     fw.write("#")
@@ -66,14 +77,10 @@ def main():
             data_sum = 0
             for k in range(len(all_data)):
                 fw.write("{:>13.6f}".format(all_data[k].newy[j][i]))
-                data_sum += all_data[k].newy[j][i] * sumratio[k]
+                data_sum += all_data[k].newy[j][i] #* sumratio[k]
             fw.write("{:>13.6f}".format(data_sum))
         fw.write("\n")
     fw.close()
-
-
-
-
 
 class Data():
     newx = None
@@ -92,24 +99,23 @@ class Data():
         self.y = self.file[1:]
         self.newy = []
 
-    def hairetusoroe(self):
+    def integraterange(self,xmin,xmax):
         count1 = 0
         count2 = 0
         while(True):
-            if Data.newx[count1] >= self.x[0]:
+            if Data.newx[count1] >= xmin:
                 break
             count1 += 1
         while(True):
-            if Data.newx[count2-1] <= self.x[-1]:
+            if Data.newx[count2-1] <= xmax:
                 break
             count2 -= 1
         if count2 == 0:
             Data.newx = Data.newx[count1:]
         else:
             Data.newx = Data.newx[count1:count2]
-            
-                
-            
+        
+        return count1,count2
 
     def interpolate(self):
         for i in range(len(self.y)):
@@ -120,12 +126,18 @@ class Data():
             new_oney = f(Data.newx)
             self.newy.append(new_oney)
 
+    def integrate(self):
+        integ_result=[]
+        for i in range(len(self.y)):
+            integ_resulti = simps(self.newy[i],self.newx)
+            integ_result.append(integ_resulti)
+        return integ_result
 
 
 
 
-    
+
+
 if __name__ == "__main__":
     main()
 
-        
