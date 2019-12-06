@@ -68,6 +68,8 @@ def make_environment():
                 node_close = int(line[1])
             if line[0] == "LMAX":
                 LMAX = int(line[1]) + 1
+            if line[0] == "a":
+                a = float(line[1])
     
     except FileNotFoundError:
         print("Waring! There is no input file. All values are default.")

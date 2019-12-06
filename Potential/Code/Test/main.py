@@ -17,6 +17,7 @@ from scipy.special import sph_harm
 from call_genev import solve_genev
 from make_V_radial_new import make_V_radial_new
 from make_environment import make_environment
+from call_besneu import besneu
 
 EPSVAL = 1.e-20
 BETAZERO = 1.e-8
@@ -344,10 +345,6 @@ def main():
                         print ("{:>8.4f}".format(R_matrix[l1**2+(l1+m1)][l2**2+(l2+m2)]),end="")
                 print("")
 
-        sys.exit()
-
-
-
         fw_revec = open("revec.dat",mode="w")
         print("revec")
         for j in range(nstates):
@@ -366,7 +363,42 @@ def main():
         fw_t.close()
 
 
+        rkbes = np.zeros(LMAX**2)
+        drkbes = np.zeros(LMAX**2)
+        rkneu = np.zeros(LMAX**2)
+        drkneu = np.zeros(LMAX**2)
+        mat1 = np.zeros((LMAX**2,LMAX**2))
+        mat2 = np.zeros((LMAX**2,LMAX**2))
+        X_matrix = np.zeros((LMAX**2,LMAX**2))
 
+        realk = np.sqrt(E)
+        kr = realk * radius
+
+        for l in range(LMAX):
+            for m in range(-l,l+1):
+                jl,nl,jlp,nlp = besneu(0,kr,l)
+                rkbes[l**2 + (l+m)] = rk * jl
+                drkbes[l**2 + (l+m)] = realk * jl + realk * rk * jlp
+                rkneu[l**2 + (l+m)] = rk * nl
+                drkneu[l**2 + (l+m)] = realk * nl * realk * rk * nlp
+
+
+        mat1 = np.zeros((LMAX**2,LMAX**2))
+
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                Wdaggerij = Wlk[j][i]
+                mat1[i][j] = alpha[i] * Wdaggerij * rkbes[j] + beta[i] * Wdaggerij * drkbes[j]
+                mat2[i][j] = alpha[i] * Wdaggerij * rkneu[j] + beta[i] * Wdaggerij * drkneu[j]
+
+        mat1 = np.linalg.inv(mat1)
+
+        X_matrix = np.dot(mat1,mat2)
+        print("X_matrix")
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                print("{:>8.4f}".format(X_matrix[i][j]),emd="")
+            print("")
 
 
 
