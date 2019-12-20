@@ -31,45 +31,60 @@ def make_environment():
     node_close = 2
     LMAX = 4
 
+    #Energy
+    Emin = 1  
+    Emax = 2
+    deltaE = 1
+
     #read input
     try:
         fr = open("input",mode="r")
         lines = fr.readlines()
         for i in range(len(lines)):
             line = lines[i].split()
-            if line[0] in "#":
-                continue
-            if line[0] == "pot_type":
-                pot_type = line[1]
-            if line[0] == "pot_region":
-                pot_region = np.array((float(line[1]),float(line[2]),float(line[3])))
-            if line[0] == "r2_ratio":
-                r2_rario = float(line[1])
-            if line[0] == "pot_mesh_point":
-                gridpx,gridpy,gridpz = int(line[1]),int(line[2]),int(line[3])
-            if line[0] == "pot_show_f":
-                if line[1] == "True":
-                    pot_show_f = True
-            if line[0] == "logmesh_point":
-                nr = float(line[1])
-            if line[0] == "logmesh_a":
-                a = float(line[1])
-            if line[0] == "si_method":
-                si_method = line[1]
-            if line[0] == "radial_pot_show_f":
-                if line[1] == "True":
-                    radial_pot_show_f = True
-            if line[0] == "new_radial_pot_show_f":
-                if line[1] == "True":
-                    new_radial_pot_show_f = True
-            if line[0] == "node_open":
-                node_open = int(line[1])
-            if line[0] == "node_close":
-                node_close = int(line[1])
-            if line[0] == "LMAX":
-                LMAX = int(line[1]) + 1
-            if line[0] == "a":
-                a = float(line[1])
+            try :
+                if line[0] in "#":
+                    continue
+                if line[0] == "pot_type":
+                    pot_type = line[1]
+                if line[0] == "pot_region":
+                    pot_region = np.array((float(line[1]),float(line[2]),float(line[3])))
+                if line[0] == "r2_ratio":
+                    r2_rario = float(line[1])
+                if line[0] == "pot_mesh_point":
+                    gridpx,gridpy,gridpz = int(line[1]),int(line[2]),int(line[3])
+                if line[0] == "pot_show_f":
+                    if line[1] == "True":
+                        pot_show_f = True
+                if line[0] == "logmesh_point":
+                    nr = float(line[1])
+                if line[0] == "logmesh_a":
+                    a = float(line[1])
+                if line[0] == "si_method":
+                    si_method = line[1]
+                if line[0] == "radial_pot_show_f":
+                    if line[1] == "True":
+                        radial_pot_show_f = True
+                if line[0] == "new_radial_pot_show_f":
+                    if line[1] == "True":
+                        new_radial_pot_show_f = True
+                if line[0] == "node_open":
+                    node_open = int(line[1])
+                if line[0] == "node_close":
+                    node_close = int(line[1])
+                if line[0] == "LMAX":
+                    LMAX = int(line[1]) + 1
+                if line[0] == "a":
+                    a = float(line[1])
+                if line[0] == "Emin":
+                    Emin = float(line[1])
+                if line[0] == "Emax":
+                    Emax = float(line[1])
+                if line[0] == "deltaE":
+                    deltaE = float(line[1])
+            except IndexError:
+                pass
+
     
     except FileNotFoundError:
         print("Waring! There is no input file. All values are default.")
@@ -85,7 +100,7 @@ def make_environment():
 
 
 
-    return pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX
+    return pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX,Emin,Emax,deltaE
 
 
 def grid (nx,ny,nz,region):

@@ -18,6 +18,7 @@ from call_genev import solve_genev
 from make_V_radial_new import make_V_radial_new
 from make_environment import make_environment
 from call_besneu import besneu
+from call_inv_remat import inv_remat
 
 EPSVAL = 1.e-20
 BETAZERO = 1.e-8
@@ -27,7 +28,7 @@ def main():
     fw_t = open("time_log",mode="w")
     t1 = time.time()
   
-    pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX,Emin,Emax,deltaE = make_environment()
+    pot_region,bound_rad,radius,region,nr,gridpx,gridpy,gridpz,x,y,z,xx,yy,zz,a,b,rofi,pot_type,pot_bottom,pot_show_f,si_method,radial_pot_show_f,new_radial_pot_show_f,node_open,node_close,LMAX = make_environment()
 
     # make potential
     V = makepotential(xx,yy,zz,pot_region,pot_type=pot_type,pot_bottom=pot_bottom,pot_show_f=pot_show_f)
@@ -260,7 +261,7 @@ def main():
 
     fw_e=open("tmatrix_s.dat",mode="w")
 
-    for E in np.arange(Emin,Emax,deltaE):
+    for e_num in range(1,2):
         lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
         alphalong = np.zeros(nstates)
         betalong = np.zeros(nstates)
@@ -273,6 +274,7 @@ def main():
         R_matrix = np.zeros((LMAX**2,LMAX**2))
         t1 = time.time()
 
+        E =  e_num *0.1
         lambda_mat = np.zeros(nstates * nstates,dtype = np.float64)
         lambda_mat -= ham_mat
         """
@@ -328,6 +330,7 @@ def main():
             alpha[k] = alphalong[j]
             beta[k]  = betalong[j]
             revec[k] = reveclong[j * nstates : (j + 1) * nstates]
+        Wdagger = np.zeros(nstates*nstates)
 
         for k in range(LMAX**2):
             dum = 0
@@ -338,6 +341,12 @@ def main():
                     dum += Wlk[l**2 + (l+m)][k] **2
             normfac[k] = 1 / np.sqrt(dum)
             Wlk[:,k] *= normfac[k]
+            lm1=0
+            for l in range(LMAX):
+                for m in range(-l,l+1):
+                    Wdagger[lm1 * LMAX**2+k] = Wlk[l**2 + (l+m)][k]
+                    lm1 += 1
+
             """
             for l in range(LMAX):
                 for m in range(-l,l+1):
@@ -350,6 +359,12 @@ def main():
                 for k in range(LMAX**2):
                     print("{:>8.4f}".format(Wlk[l**2 + (l + m)][k]),end=" ")
                 print("")
+        print("Wdagger")
+        for k in range(LMAX**2):
+            for l in range(LMAX):
+                for m in range(-l,l+1):
+                    print("{:>8.4f}".format(Wdagger[(l**2 + (l + m)) * LMAX**2+ k]),end=" ")
+            print("")
 
         print("R-matrix")
         for l1 in range(LMAX):
@@ -382,7 +397,7 @@ def main():
         drkbes = np.zeros(LMAX**2)
         rkneu = np.zeros(LMAX**2)
         drkneu = np.zeros(LMAX**2)
-        mat1 = np.zeros((LMAX**2,LMAX**2))
+        mat1 = np.zeros((LMAX**2*LMAX**2))
         mat2 = np.zeros((LMAX**2,LMAX**2))
         X_matrix = np.zeros((LMAX**2,LMAX**2))
         t_matrix = np.zeros((LMAX**2,LMAX**2),dtype=np.complex64)
@@ -406,46 +421,56 @@ def main():
                 drkneu[l**2 + (l+m)] = realk * nl * realk * kr * nlp
 
 
-        mat1 = np.zeros((LMAX**2,LMAX**2))
+        mat1 = np.zeros((LMAX**2 * LMAX**2))
 
+
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                wij = Wdagger[i + LMAX**2 * j]
+                mat1[i + LMAX**2 * j] = alpha[i] * wij * rkbes[j] + beta[i] *wij * drkbes[j]
         print("mat1")
-        for l in range(LMAX**2):
-            for k in range(LMAX**2):
-                Wkl = Wlk[k][l]
-                mat1[l][k] = alpha[l] * Wkl * rkbes[k] + beta[l] * Wkl * drkbes[k]
-                mat2[l][k] = alpha[l] * Wkl * rkneu[k] + beta[l] * Wkl * drkneu[k]
-                print("{:>8.4f}".format(mat1[l][k]),end="")
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                print("{:>8.4f}".format(mat1[j*LMAX**2 + i]),end="")
             print("")
-        mat1 = np.linalg.inv(mat1)
-        print("mat1_inv")
-        for l in range(LMAX**2):
-            for k in range(LMAX**2):
-                print("{:>8.4f}".format(mat1[l][k]),end="")
-            print("")
+        inv_remat(LMAX**2,mat1)
 
-
-        X_matrix = np.dot(mat1,mat2)
-
+        mat1line = np.zeros(LMAX**2)
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                mat1line[j] = mat1[i + LMAX**2 * j]
+            for j in range(LMAX**2):
+                sum_ = 0
+                for k in range(LMAX**2):
+                    wkj = Wdagger[k+LMAX**2*j]
+                    mat2kj = alpha[k] * wkj * rkneu[ j ] + beta[k] * wkj * drkneu[ j ]
+                    sum_ += mat1line[k] * mat2kj
+                mat1[ i + LMAX**2 * j ] = sum_
         
-        t_matrix += X_matrix * (- realk)
-        if modified :
-            t_matrix -= np.identity(LMAX**2) * realk
-        else:
-            t_matrix -= np.identity(LMAX**2,dtype=np.complex64) * complex(0,realk)
-
+        tau = np.zeros(LMAX**2*LMAX**2*2)
+        for i in range(LMAX**2):
+            for j in range(LMAX**2):
+                xij = mat1[i+LMAX**2*j]
+                if i ==j:
+                    deltaij = 1
+                else:
+                    deltaij = 0
+                ijre = 2 *(i+LMAX**2*j)
+                tau[ijre  ] = - realk * xij
+                if modified:
+                    tau[ijre  ] += - realk * deltaij
+                    tau[ijre+1] = 0
+                else:
+                    tau[ijre+1] = - realk * deltaij
 
         print("t_matrix_real_inv")
         for i in range(LMAX**2):
             for j in range(LMAX**2):
-                print("{:>8.4f}".format(t_matrix[i][j].real),end="")
+                ijre = 2 *(i+LMAX**2*j)
+                print("{:>8.4f}".format(tau[ijre]),end="")
             print("")
+        sys.exit()
         
-
-        det_t = np.linalg.det(t_matrix)
-        fw_e.write("{:>13.8f}  {:>18.9e}\n".format(E,det_t.real))
-
-        
-
         t_matrix = np.linalg.inv(t_matrix)
 
         print("t_matrix_real")
@@ -453,6 +478,7 @@ def main():
             for j in range(LMAX**2):
                 print("{:>8.4f}".format(t_matrix[i][j].real),end="")
             print("")
+        fw_e.write("{:>13.8f}{:>13.8f}\n".format(E,t_matrix[0][0].real))
 
     fw_e.close()
     fw_t.close()

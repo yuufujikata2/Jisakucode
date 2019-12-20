@@ -9,6 +9,15 @@ def make_basis(LMAX,node_open,node_close,nr,a,b,rofi,vofi):
 
     for lvalsh in range (LMAX):
         l_basis = []
+        # for close channel
+        val = 0.
+        slo = -1.
+        for nc   in range(node_close):
+            basis = Basis(nr)
+            emin = -10.
+            emax = 1000.
+            basis.solve_rseq(a,b,emin,emax,lvalsh,nc,nr,rofi,slo,vofi,val)
+            l_basis.append(basis)
         # for open channel
         val = 1.
         slo = 0.
@@ -19,15 +28,7 @@ def make_basis(LMAX,node_open,node_close,nr,a,b,rofi,vofi):
             basis.solve_rseq(a,b,emin,emax,lvalsh,no,nr,rofi,slo,vofi,val)
             l_basis.append(basis)
 
-        # for close channel
-        val = 0.
-        slo = -1.
-        for nc   in range(node_close):
-            basis = Basis(nr)
-            emin = -10.
-            emax = 1000.
-            basis.solve_rseq(a,b,emin,emax,lvalsh,nc,nr,rofi,slo,vofi,val)
-            l_basis.append(basis)
+
 
         all_basis.append(l_basis)
 
